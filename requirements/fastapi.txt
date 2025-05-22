@@ -1,0 +1,4 @@
+# FastAPI dependencies
+fastapi
+starlette
+uvicorn  # For running FastAPI examples

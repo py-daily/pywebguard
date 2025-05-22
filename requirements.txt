@@ -1,0 +1,17 @@
+# Install base requirements
+-r requirements/base.txt
+
+# Choose your framework:
+# For FastAPI:
+-r requirements/fastapi.txt
+# For Flask:
+-r requirements/flask.txt
+
+# For frameworks:
+-r requirements/frameworks.txt
+
+# Install storage requirements
+-r requirements/storage.txt
+
+# For development, also install:
+-r requirements/dev.txt

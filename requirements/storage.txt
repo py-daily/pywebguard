@@ -1,0 +1,7 @@
+# Redis storage
+redis
+pymongo
+aiosqlite
+tinydb
+psycopg2-binary
+asyncpg

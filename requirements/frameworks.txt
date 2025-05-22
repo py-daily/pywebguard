@@ -1,0 +1,7 @@
+# FastAPI dependencies
+fastapi
+starlette
+uvicorn  # For running FastAPI examples
+
+# Flask dependencies
+flask
