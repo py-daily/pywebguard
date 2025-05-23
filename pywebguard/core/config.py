@@ -124,6 +124,18 @@ class LoggingConfig(BaseModel):
         enabled: Whether logging is enabled
         log_file: Path to log file (None for stdout)
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        stream: Whether to log to stdout
+        stream_levels: List of levels to log to stdout
+        max_log_size: Maximum log file size in bytes
+        max_log_files: Maximum number of log files to keep
+        log_format: Log format string
+        log_date_format: Log date format string
+        log_rotation: Log rotation interval
+        log_backup_count: Number of backup log files to keep
+        log_encoding: Log file encoding
+        meilisearch: Meilisearch backend configuration
+        elasticsearch: Elasticsearch backend configuration
+        mongodb: MongoDB backend configuration
     """
 
     enabled: bool = True
@@ -138,6 +150,11 @@ class LoggingConfig(BaseModel):
     log_rotation: str = Field(default="midnight")
     log_backup_count: int = Field(default=3)
     log_encoding: str = Field(default="utf-8")
+    
+    # Backend configurations
+    meilisearch: Optional[Dict[str, Any]] = None
+    elasticsearch: Optional[Dict[str, Any]] = None
+    mongodb: Optional[Dict[str, Any]] = None
 
     @field_validator("log_level")
     def validate_log_level(cls, v: str) -> str:
@@ -156,6 +173,73 @@ class LoggingConfig(BaseModel):
         if v.upper() not in valid_levels:
             raise ValueError(f"Invalid log level: {v}. Must be one of {valid_levels}")
         return v.upper()
+
+    @field_validator("meilisearch")
+    def validate_meilisearch(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Validate Meilisearch configuration.
+
+        Args:
+            v: Meilisearch configuration to validate
+
+        Returns:
+            Validated Meilisearch configuration
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        if v is None:
+            return None
+
+        required_fields = {"url", "api_key", "index_name"}
+        missing_fields = required_fields - set(v.keys())
+        if missing_fields:
+            raise ValueError(f"Missing required Meilisearch fields: {missing_fields}")
+        return v
+
+    @field_validator("elasticsearch")
+    def validate_elasticsearch(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Validate Elasticsearch configuration.
+
+        Args:
+            v: Elasticsearch configuration to validate
+
+        Returns:
+            Validated Elasticsearch configuration
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        if v is None:
+            return None
+
+        required_fields = {"hosts"}
+        missing_fields = required_fields - set(v.keys())
+        if missing_fields:
+            raise ValueError(f"Missing required Elasticsearch fields: {missing_fields}")
+        return v
+
+    @field_validator("mongodb")
+    def validate_mongodb(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+        """Validate MongoDB configuration.
+
+        Args:
+            v: MongoDB configuration to validate
+
+        Returns:
+            Validated MongoDB configuration
+
+        Raises:
+            ValueError: If configuration is invalid
+        """
+        if v is None:
+            return None
+
+        # Check if URI is provided or if host/port are provided
+        if "uri" not in v and not all(k in v for k in ["host", "port", "database", "collection"]):
+            raise ValueError(
+                "MongoDB configuration must include either 'uri' or all of 'host', 'port', 'database', and 'collection'"
+            )
+        return v
 
 
 class StorageConfig(BaseModel):

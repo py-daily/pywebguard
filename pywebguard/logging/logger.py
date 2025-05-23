@@ -5,8 +5,9 @@ Logging functionality for PyWebGuard.
 import logging
 import json
 import time
-from typing import Dict, Any, Optional
+from typing import Dict, Any, Optional, List, Union
 from pywebguard.core.config import LoggingConfig
+from .backends import MeilisearchBackend, ElasticsearchBackend, MongoDBBackend
 
 
 class SecurityLogger:
@@ -23,6 +24,7 @@ class SecurityLogger:
         """
         self.config = config
         self.logger = self._setup_logger()
+        self.backends = self._setup_backends()
 
     def _setup_logger(self) -> logging.Logger:
         """
@@ -61,6 +63,29 @@ class SecurityLogger:
 
         return logger
 
+    def _setup_backends(self) -> List[Any]:
+        """
+        Set up logging backends based on configuration.
+
+        Returns:
+            List of configured logging backends
+        """
+        backends = []
+
+        # Add Meilisearch backend if configured
+        if hasattr(self.config, "meilisearch") and self.config.meilisearch:
+            backends.append(MeilisearchBackend(self.config.meilisearch))
+
+        # Add Elasticsearch backend if configured
+        if hasattr(self.config, "elasticsearch") and self.config.elasticsearch:
+            backends.append(ElasticsearchBackend(self.config.elasticsearch))
+
+        # Add MongoDB backend if configured
+        if hasattr(self.config, "mongodb") and self.config.mongodb:
+            backends.append(MongoDBBackend(self.config.mongodb))
+
+        return backends
+
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
         Log a request.
@@ -85,8 +110,15 @@ class SecurityLogger:
             "user_agent": request_info.get("user_agent", "unknown"),
         }
 
-        # Log the entry
+        # Log to console/file
         self.logger.info(f"Request: {json.dumps(log_entry)}")
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                backend.log_request(request_info, response)
+            except Exception as e:
+                self.logger.error(f"Failed to log request to backend: {str(e)}")
 
     def log_blocked_request(
         self, request_info: Dict[str, Any], block_type: str, reason: str
@@ -113,8 +145,40 @@ class SecurityLogger:
             "user_agent": request_info.get("user_agent", "unknown"),
         }
 
-        # Log the entry
+        # Log to console/file
         self.logger.warning(f"Blocked request: {json.dumps(log_entry)}")
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                backend.log_blocked_request(request_info, block_type, reason)
+            except Exception as e:
+                self.logger.error(f"Failed to log blocked request to backend: {str(e)}")
+
+    def log_security_event(
+        self, level: str, message: str, extra: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Log a security event.
+
+        Args:
+            level: Log level (INFO, WARNING, ERROR, etc.)
+            message: The log message
+            extra: Additional information to log
+        """
+        if not self.config.enabled:
+            return
+
+        # Log to console/file
+        log_method = getattr(self.logger, level.lower(), self.logger.info)
+        log_method(message, extra=extra)
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                backend.log_security_event(level, message, extra)
+            except Exception as e:
+                self.logger.error(f"Failed to log security event to backend: {str(e)}")
 
     def _extract_status_code(self, response: Any) -> int:
         """
@@ -154,6 +218,7 @@ class AsyncSecurityLogger:
         """
         self.config = config
         self.logger = self._setup_logger()
+        self.backends = self._setup_backends()
 
     def _setup_logger(self) -> logging.Logger:
         """
@@ -192,6 +257,29 @@ class AsyncSecurityLogger:
 
         return logger
 
+    def _setup_backends(self) -> List[Any]:
+        """
+        Set up logging backends based on configuration.
+
+        Returns:
+            List of configured logging backends
+        """
+        backends = []
+
+        # Add Meilisearch backend if configured
+        if hasattr(self.config, "meilisearch") and self.config.meilisearch:
+            backends.append(MeilisearchBackend(self.config.meilisearch))
+
+        # Add Elasticsearch backend if configured
+        if hasattr(self.config, "elasticsearch") and self.config.elasticsearch:
+            backends.append(ElasticsearchBackend(self.config.elasticsearch))
+
+        # Add MongoDB backend if configured
+        if hasattr(self.config, "mongodb") and self.config.mongodb:
+            backends.append(MongoDBBackend(self.config.mongodb))
+
+        return backends
+
     async def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
         Log a request asynchronously.
@@ -216,8 +304,15 @@ class AsyncSecurityLogger:
             "user_agent": request_info.get("user_agent", "unknown"),
         }
 
-        # Log the entry
+        # Log to console/file
         self.logger.info(f"Request: {json.dumps(log_entry)}")
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                await backend.log_request(request_info, response)
+            except Exception as e:
+                self.logger.error(f"Failed to log request to backend: {str(e)}")
 
     async def log_blocked_request(
         self, request_info: Dict[str, Any], block_type: str, reason: str
@@ -244,8 +339,40 @@ class AsyncSecurityLogger:
             "user_agent": request_info.get("user_agent", "unknown"),
         }
 
-        # Log the entry
+        # Log to console/file
         self.logger.warning(f"Blocked request: {json.dumps(log_entry)}")
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                await backend.log_blocked_request(request_info, block_type, reason)
+            except Exception as e:
+                self.logger.error(f"Failed to log blocked request to backend: {str(e)}")
+
+    async def log_security_event(
+        self, level: str, message: str, extra: Optional[Dict[str, Any]] = None
+    ) -> None:
+        """
+        Log a security event asynchronously.
+
+        Args:
+            level: Log level (INFO, WARNING, ERROR, etc.)
+            message: The log message
+            extra: Additional information to log
+        """
+        if not self.config.enabled:
+            return
+
+        # Log to console/file
+        log_method = getattr(self.logger, level.lower(), self.logger.info)
+        log_method(message, extra=extra)
+
+        # Log to backends
+        for backend in self.backends:
+            try:
+                await backend.log_security_event(level, message, extra)
+            except Exception as e:
+                self.logger.error(f"Failed to log security event to backend: {str(e)}")
 
     def _extract_status_code(self, response: Any) -> int:
         """

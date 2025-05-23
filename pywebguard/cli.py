@@ -12,11 +12,12 @@ import os
 import time
 import ipaddress
 from typing import Dict, Any, List, Optional, Union, Tuple, NoReturn
-
+from pathlib import Path
 
 from pywebguard import __version__
 from pywebguard.core.config import GuardConfig
 from pywebguard.storage.memory import MemoryStorage
+from pywebguard.logging.logger import SecurityLogger, AsyncSecurityLogger
 
 try:
     from pywebguard.storage._redis import RedisStorage
@@ -182,7 +183,23 @@ def cmd_init(output_path: str, framework: Optional[str] = None) -> int:
             "allow_credentials": False,
             "max_age": 600,
         },
-        "logging": {"enabled": True, "log_file": "pywebguard.log", "log_level": "INFO"},
+        "logging": {
+            "enabled": True,
+            "log_file": "pywebguard.log",
+            "log_level": "INFO",
+            "stream": True,
+            "stream_levels": ["ERROR", "CRITICAL"],
+            "max_log_size": 10 * 1024 * 1024,  # 10MB
+            "max_log_files": 2,
+            "log_format": "{asctime} {levelname} {message}",
+            "log_date_format": "%Y-%m-%d %H:%M:%S",
+            "log_rotation": "midnight",
+            "log_backup_count": 3,
+            "log_encoding": "utf-8",
+            "meilisearch": None,
+            "elasticsearch": None,
+            "mongodb": None,
+        },
         "storage": {
             "type": "memory",
             "redis_url": None,
@@ -210,11 +227,11 @@ def cmd_init(output_path: str, framework: Optional[str] = None) -> int:
     # Write configuration to file
     try:
         with open(output_path, "w") as f:
-            json.dump(config, f, indent=2)
-        print(f"Configuration file created at {output_path}")
+            json.dump(config, f, indent=4)
+        print(f"Configuration written to {output_path}")
         return 0
-    except Exception as e:
-        print(f"Error creating configuration file: {e}")
+    except IOError as e:
+        print(f"Error writing configuration: {e}", file=sys.stderr)
         return 1
 
 
@@ -618,7 +635,10 @@ def cmd_interactive_init() -> int:
             "auto_ban_threshold": 100,
             "auto_ban_duration_minutes": 60,
         },
-        "user_agent": {"enabled": True, "blocked_agents": []},
+        "user_agent": {
+            "enabled": True,
+            "blocked_agents": ["curl", "wget", "python-requests"],
+        },
         "penetration": {
             "enabled": True,
             "log_suspicious": True,
@@ -632,7 +652,23 @@ def cmd_interactive_init() -> int:
             "allow_credentials": False,
             "max_age": 600,
         },
-        "logging": {"enabled": True, "log_file": "pywebguard.log", "log_level": "INFO"},
+        "logging": {
+            "enabled": True,
+            "log_file": "pywebguard.log",
+            "log_level": "INFO",
+            "stream": True,
+            "stream_levels": ["ERROR", "CRITICAL"],
+            "max_log_size": 10 * 1024 * 1024,  # 10MB
+            "max_log_files": 2,
+            "log_format": "{asctime} {levelname} {message}",
+            "log_date_format": "%Y-%m-%d %H:%M:%S",
+            "log_rotation": "midnight",
+            "log_backup_count": 3,
+            "log_encoding": "utf-8",
+            "meilisearch": None,
+            "elasticsearch": None,
+            "mongodb": None,
+        },
         "storage": {
             "type": "memory",
             "redis_url": None,
@@ -641,75 +677,6 @@ def cmd_interactive_init() -> int:
         },
     }
 
-    # Framework
-    print("\nWhich framework will you use?")
-    print("1. FastAPI")
-    print("2. Flask")
-    print("3. None/Other")
-    framework_choice = input("Enter choice [3]: ").strip() or "3"
-
-    if framework_choice == "1":
-        config["framework"] = {"type": "fastapi", "route_rate_limits": []}
-
-        # Ask about route rate limits
-        add_route_limits = (
-            input("\nDo you want to add route-specific rate limits? [y/N]: ")
-            .strip()
-            .lower()
-            or "n"
-        )
-        if add_route_limits in ["y", "yes"]:
-            while True:
-                endpoint = input(
-                    "\nEnter endpoint pattern (e.g., /api/limited, /api/uploads/*, or empty to finish): "
-                ).strip()
-                if not endpoint:
-                    break
-
-                requests_per_minute = (
-                    input("Enter requests per minute [10]: ").strip() or "10"
-                )
-                burst_size = input("Enter burst size [2]: ").strip() or "2"
-
-                config["framework"]["route_rate_limits"].append(
-                    {
-                        "endpoint": endpoint,
-                        "requests_per_minute": int(requests_per_minute),
-                        "burst_size": int(burst_size),
-                    }
-                )
-
-    elif framework_choice == "2":
-        config["framework"] = {"type": "flask", "route_rate_limits": []}
-
-        # Ask about route rate limits
-        add_route_limits = (
-            input("\nDo you want to add route-specific rate limits? [y/N]: ")
-            .strip()
-            .lower()
-            or "n"
-        )
-        if add_route_limits in ["y", "yes"]:
-            while True:
-                endpoint = input(
-                    "\nEnter endpoint pattern (e.g., /api/limited, /api/uploads/*, or empty to finish): "
-                ).strip()
-                if not endpoint:
-                    break
-
-                requests_per_minute = (
-                    input("Enter requests per minute [10]: ").strip() or "10"
-                )
-                burst_size = input("Enter burst size [2]: ").strip() or "2"
-
-                config["framework"]["route_rate_limits"].append(
-                    {
-                        "endpoint": endpoint,
-                        "requests_per_minute": int(requests_per_minute),
-                        "burst_size": int(burst_size),
-                    }
-                )
-
     # IP Filter
     print("\nIP Filter Configuration")
     config["ip_filter"]["enabled"] = input(
@@ -717,25 +684,14 @@ def cmd_interactive_init() -> int:
     ).strip().lower() not in ["n", "no", "0", "false"]
 
     if config["ip_filter"]["enabled"]:
-        # Whitelist
-        whitelist_input = input(
-            "Enter whitelisted IPs (comma-separated, leave empty for none): "
-        ).strip()
-        if whitelist_input:
-            config["ip_filter"]["whitelist"] = [
-                ip.strip() for ip in whitelist_input.split(",")
-            ]
+        whitelist = input("Enter whitelisted IPs (comma-separated): ").strip()
+        if whitelist:
+            config["ip_filter"]["whitelist"] = [ip.strip() for ip in whitelist.split(",")]
 
-        # Blacklist
-        blacklist_input = input(
-            "Enter blacklisted IPs (comma-separated, leave empty for none): "
-        ).strip()
-        if blacklist_input:
-            config["ip_filter"]["blacklist"] = [
-                ip.strip() for ip in blacklist_input.split(",")
-            ]
+        blacklist = input("Enter blacklisted IPs (comma-separated): ").strip()
+        if blacklist:
+            config["ip_filter"]["blacklist"] = [ip.strip() for ip in blacklist.split(",")]
 
-        # Cloud providers
         config["ip_filter"]["block_cloud_providers"] = input(
             "Block cloud provider IPs? [y/N]: "
         ).strip().lower() in ["y", "yes", "1", "true"]
@@ -747,57 +703,94 @@ def cmd_interactive_init() -> int:
     ).strip().lower() not in ["n", "no", "0", "false"]
 
     if config["rate_limit"]["enabled"]:
-        requests_per_minute = input("Enter requests per minute [60]: ").strip() or "60"
-        config["rate_limit"]["requests_per_minute"] = int(requests_per_minute)
+        rpm = input("Enter requests per minute [60]: ").strip()
+        if rpm:
+            config["rate_limit"]["requests_per_minute"] = int(rpm)
 
-        burst_size = input("Enter burst size [10]: ").strip() or "10"
-        config["rate_limit"]["burst_size"] = int(burst_size)
+        burst = input("Enter burst size [10]: ").strip()
+        if burst:
+            config["rate_limit"]["burst_size"] = int(burst)
 
-        auto_ban_threshold = (
-            input("Enter auto-ban threshold (0 to disable) [100]: ").strip() or "100"
-        )
-        config["rate_limit"]["auto_ban_threshold"] = int(auto_ban_threshold)
+        ban_threshold = input("Enter auto-ban threshold [100]: ").strip()
+        if ban_threshold:
+            config["rate_limit"]["auto_ban_threshold"] = int(ban_threshold)
 
-        if int(auto_ban_threshold) > 0:
-            auto_ban_duration = (
-                input("Enter auto-ban duration in minutes [60]: ").strip() or "60"
-            )
-            config["rate_limit"]["auto_ban_duration_minutes"] = int(auto_ban_duration)
+        ban_duration = input("Enter auto-ban duration in minutes [60]: ").strip()
+        if ban_duration:
+            config["rate_limit"]["auto_ban_duration_minutes"] = int(ban_duration)
 
-    # User Agent Filter
-    print("\nUser Agent Filter Configuration")
+    # User Agent
+    print("\nUser Agent Configuration")
     config["user_agent"]["enabled"] = input(
         "Enable user agent filtering? [Y/n]: "
     ).strip().lower() not in ["n", "no", "0", "false"]
 
     if config["user_agent"]["enabled"]:
-        # Blocked agents
-        blocked_agents_input = input(
-            "Enter blocked user agents (comma-separated, leave empty for none): "
+        blocked_agents = input(
+            "Enter blocked user agents (comma-separated) [curl,wget,python-requests]: "
         ).strip()
-        if blocked_agents_input:
+        if blocked_agents:
             config["user_agent"]["blocked_agents"] = [
-                agent.strip() for agent in blocked_agents_input.split(",")
+                agent.strip() for agent in blocked_agents.split(",")
             ]
-        else:
-            # Suggest common bots to block
-            block_common = input(
-                "Block common bots (curl, wget, python-requests)? [Y/n]: "
-            ).strip().lower() not in ["n", "no", "0", "false"]
-            if block_common:
-                config["user_agent"]["blocked_agents"] = [
-                    "curl",
-                    "wget",
-                    "python-requests",
-                ]
+
+    # Penetration Detection
+    print("\nPenetration Detection Configuration")
+    config["penetration"]["enabled"] = input(
+        "Enable penetration detection? [Y/n]: "
+    ).strip().lower() not in ["n", "no", "0", "false"]
+
+    if config["penetration"]["enabled"]:
+        config["penetration"]["log_suspicious"] = input(
+            "Log suspicious activities? [Y/n]: "
+        ).strip().lower() not in ["n", "no", "0", "false"]
+
+        patterns = input("Enter suspicious patterns (comma-separated): ").strip()
+        if patterns:
+            config["penetration"]["suspicious_patterns"] = [
+                pattern.strip() for pattern in patterns.split(",")
+            ]
+
+    # CORS
+    print("\nCORS Configuration")
+    config["cors"]["enabled"] = input(
+        "Enable CORS? [Y/n]: "
+    ).strip().lower() not in ["n", "no", "0", "false"]
+
+    if config["cors"]["enabled"]:
+        origins = input("Enter allowed origins (comma-separated) [*]: ").strip()
+        if origins:
+            config["cors"]["allow_origins"] = [origin.strip() for origin in origins.split(",")]
+
+        methods = input(
+            "Enter allowed methods (comma-separated) [GET,POST,PUT,DELETE,OPTIONS]: "
+        ).strip()
+        if methods:
+            config["cors"]["allow_methods"] = [
+                method.strip() for method in methods.split(",")
+            ]
+
+        headers = input("Enter allowed headers (comma-separated) [*]: ").strip()
+        if headers:
+            config["cors"]["allow_headers"] = [header.strip() for header in headers.split(",")]
+
+        config["cors"]["allow_credentials"] = input(
+            "Allow credentials? [y/N]: "
+        ).strip().lower() in ["y", "yes", "1", "true"]
+
+        max_age = input("Enter max age in seconds [600]: ").strip()
+        if max_age:
+            config["cors"]["max_age"] = int(max_age)
 
     # Storage
     print("\nStorage Configuration")
-    print("1. Memory (default, not persistent)")
+    print("Storage types:")
+    print("1. Memory (default)")
     print("2. Redis")
     print("3. SQLite")
     print("4. TinyDB")
-    storage_choice = input("Enter choice [1]: ").strip() or "1"
+
+    storage_choice = input("Choose storage type [1]: ").strip() or "1"
 
     if storage_choice == "2":
         config["storage"]["type"] = "redis"
@@ -844,6 +837,47 @@ def cmd_interactive_init() -> int:
         log_level = input("Enter log level [INFO]: ").strip().upper() or "INFO"
         config["logging"]["log_level"] = log_level
 
+        # Configure logging backends
+        print("\nLogging Backends")
+        print("Available backends:")
+        print("1. None (default)")
+        print("2. Meilisearch")
+        print("3. Elasticsearch")
+        print("4. MongoDB")
+
+        backend_choice = input("Choose logging backend [1]: ").strip() or "1"
+
+        if backend_choice == "2":
+            config["logging"]["meilisearch"] = {
+                "url": input("Enter Meilisearch URL [http://localhost:7700]: ").strip() or "http://localhost:7700",
+                "api_key": input("Enter Meilisearch API key: ").strip(),
+                "index_name": input("Enter index name [pywebguard_logs]: ").strip() or "pywebguard_logs"
+            }
+        elif backend_choice == "3":
+            config["logging"]["elasticsearch"] = {
+                "hosts": [input("Enter Elasticsearch host [http://localhost:9200]: ").strip() or "http://localhost:9200"],
+                "index_prefix": input("Enter index prefix [pywebguard]: ").strip() or "pywebguard",
+                "username": input("Enter username (optional): ").strip() or None,
+                "password": input("Enter password (optional): ").strip() or None
+            }
+        elif backend_choice == "4":
+            use_uri = input("Use connection URI? [y/N]: ").strip().lower() in ["y", "yes", "1", "true"]
+            if use_uri:
+                config["logging"]["mongodb"] = {
+                    "uri": input("Enter MongoDB URI: ").strip(),
+                    "database": input("Enter database name [pywebguard]: ").strip() or "pywebguard",
+                    "collection": input("Enter collection name [logs]: ").strip() or "logs"
+                }
+            else:
+                config["logging"]["mongodb"] = {
+                    "host": input("Enter MongoDB host [localhost]: ").strip() or "localhost",
+                    "port": int(input("Enter MongoDB port [27017]: ").strip() or "27017"),
+                    "database": input("Enter database name [pywebguard]: ").strip() or "pywebguard",
+                    "collection": input("Enter collection name [logs]: ").strip() or "logs",
+                    "username": input("Enter username (optional): ").strip() or None,
+                    "password": input("Enter password (optional): ").strip() or None
+                }
+
     # Output file
     output_path = (
         input("\nEnter output file path [pywebguard.json]: ").strip()
@@ -853,11 +887,11 @@ def cmd_interactive_init() -> int:
     # Write configuration to file
     try:
         with open(output_path, "w") as f:
-            json.dump(config, f, indent=2)
-        print(f"\nConfiguration file created at {output_path}")
+            json.dump(config, f, indent=4)
+        print(f"Configuration written to {output_path}")
         return 0
-    except Exception as e:
-        print(f"\nError creating configuration file: {e}")
+    except IOError as e:
+        print(f"Error writing configuration: {e}", file=sys.stderr)
         return 1
 
 

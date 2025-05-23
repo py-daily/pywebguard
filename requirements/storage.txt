@@ -5,3 +5,5 @@ aiosqlite
 tinydb
 psycopg2-binary
 asyncpg
+meilisearch
+elasticsearch
