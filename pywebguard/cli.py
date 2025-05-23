@@ -686,11 +686,15 @@ def cmd_interactive_init() -> int:
     if config["ip_filter"]["enabled"]:
         whitelist = input("Enter whitelisted IPs (comma-separated): ").strip()
         if whitelist:
-            config["ip_filter"]["whitelist"] = [ip.strip() for ip in whitelist.split(",")]
+            config["ip_filter"]["whitelist"] = [
+                ip.strip() for ip in whitelist.split(",")
+            ]
 
         blacklist = input("Enter blacklisted IPs (comma-separated): ").strip()
         if blacklist:
-            config["ip_filter"]["blacklist"] = [ip.strip() for ip in blacklist.split(",")]
+            config["ip_filter"]["blacklist"] = [
+                ip.strip() for ip in blacklist.split(",")
+            ]
 
         config["ip_filter"]["block_cloud_providers"] = input(
             "Block cloud provider IPs? [y/N]: "
@@ -753,14 +757,19 @@ def cmd_interactive_init() -> int:
 
     # CORS
     print("\nCORS Configuration")
-    config["cors"]["enabled"] = input(
-        "Enable CORS? [Y/n]: "
-    ).strip().lower() not in ["n", "no", "0", "false"]
+    config["cors"]["enabled"] = input("Enable CORS? [Y/n]: ").strip().lower() not in [
+        "n",
+        "no",
+        "0",
+        "false",
+    ]
 
     if config["cors"]["enabled"]:
         origins = input("Enter allowed origins (comma-separated) [*]: ").strip()
         if origins:
-            config["cors"]["allow_origins"] = [origin.strip() for origin in origins.split(",")]
+            config["cors"]["allow_origins"] = [
+                origin.strip() for origin in origins.split(",")
+            ]
 
         methods = input(
             "Enter allowed methods (comma-separated) [GET,POST,PUT,DELETE,OPTIONS]: "
@@ -772,7 +781,9 @@ def cmd_interactive_init() -> int:
 
         headers = input("Enter allowed headers (comma-separated) [*]: ").strip()
         if headers:
-            config["cors"]["allow_headers"] = [header.strip() for header in headers.split(",")]
+            config["cors"]["allow_headers"] = [
+                header.strip() for header in headers.split(",")
+            ]
 
         config["cors"]["allow_credentials"] = input(
             "Allow credentials? [y/N]: "
@@ -849,33 +860,51 @@ def cmd_interactive_init() -> int:
 
         if backend_choice == "2":
             config["logging"]["meilisearch"] = {
-                "url": input("Enter Meilisearch URL [http://localhost:7700]: ").strip() or "http://localhost:7700",
+                "url": input("Enter Meilisearch URL [http://localhost:7700]: ").strip()
+                or "http://localhost:7700",
                 "api_key": input("Enter Meilisearch API key: ").strip(),
-                "index_name": input("Enter index name [pywebguard_logs]: ").strip() or "pywebguard_logs"
+                "index_name": input("Enter index name [pywebguard_logs]: ").strip()
+                or "pywebguard_logs",
             }
         elif backend_choice == "3":
             config["logging"]["elasticsearch"] = {
-                "hosts": [input("Enter Elasticsearch host [http://localhost:9200]: ").strip() or "http://localhost:9200"],
-                "index_prefix": input("Enter index prefix [pywebguard]: ").strip() or "pywebguard",
+                "hosts": [
+                    input("Enter Elasticsearch host [http://localhost:9200]: ").strip()
+                    or "http://localhost:9200"
+                ],
+                "index_prefix": input("Enter index prefix [pywebguard]: ").strip()
+                or "pywebguard",
                 "username": input("Enter username (optional): ").strip() or None,
-                "password": input("Enter password (optional): ").strip() or None
+                "password": input("Enter password (optional): ").strip() or None,
             }
         elif backend_choice == "4":
-            use_uri = input("Use connection URI? [y/N]: ").strip().lower() in ["y", "yes", "1", "true"]
+            use_uri = input("Use connection URI? [y/N]: ").strip().lower() in [
+                "y",
+                "yes",
+                "1",
+                "true",
+            ]
             if use_uri:
                 config["logging"]["mongodb"] = {
                     "uri": input("Enter MongoDB URI: ").strip(),
-                    "database": input("Enter database name [pywebguard]: ").strip() or "pywebguard",
-                    "collection": input("Enter collection name [logs]: ").strip() or "logs"
+                    "database": input("Enter database name [pywebguard]: ").strip()
+                    or "pywebguard",
+                    "collection": input("Enter collection name [logs]: ").strip()
+                    or "logs",
                 }
             else:
                 config["logging"]["mongodb"] = {
-                    "host": input("Enter MongoDB host [localhost]: ").strip() or "localhost",
-                    "port": int(input("Enter MongoDB port [27017]: ").strip() or "27017"),
-                    "database": input("Enter database name [pywebguard]: ").strip() or "pywebguard",
-                    "collection": input("Enter collection name [logs]: ").strip() or "logs",
+                    "host": input("Enter MongoDB host [localhost]: ").strip()
+                    or "localhost",
+                    "port": int(
+                        input("Enter MongoDB port [27017]: ").strip() or "27017"
+                    ),
+                    "database": input("Enter database name [pywebguard]: ").strip()
+                    or "pywebguard",
+                    "collection": input("Enter collection name [logs]: ").strip()
+                    or "logs",
                     "username": input("Enter username (optional): ").strip() or None,
-                    "password": input("Enter password (optional): ").strip() or None
+                    "password": input("Enter password (optional): ").strip() or None,
                 }
 
     # Output file

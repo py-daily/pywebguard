@@ -5,7 +5,6 @@ import time
 from typing import Dict, Any, Optional, Generator, Callable
 
 from pywebguard.core.config import (
-    WebGuardConfig,
     GuardConfig,
     IPFilterConfig,
     RateLimitConfig,
@@ -149,7 +148,7 @@ def rate_limited_guard(
         rate_limit=RateLimitConfig(
             enabled=True,
             requests_per_minute=1,  # Very low rate limit for testing
-            burst_size=0,
+            burst_size=0,  # Strict: no burst allowed
         ),
     )
     return Guard(config=config, storage=memory_storage)
@@ -165,7 +164,7 @@ def async_rate_limited_guard(
         rate_limit=RateLimitConfig(
             enabled=True,
             requests_per_minute=1,  # Very low rate limit for testing
-            burst_size=0,
+            burst_size=0,  # Strict: no burst allowed
         ),
     )
     return AsyncGuard(config=config, storage=async_memory_storage)
@@ -183,10 +182,9 @@ def route_rate_limited_guard(
         "/api/limited",
         {
             "requests_per_minute": 1,
-            "burst_size": 0,
+            "burst_size": 0,  # Strict: no burst allowed
         },
     )
-
     return guard
 
 
@@ -202,8 +200,7 @@ def async_route_rate_limited_guard(
         "/api/limited",
         {
             "requests_per_minute": 1,
-            "burst_size": 0,
+            "burst_size": 0,  # Strict: no burst allowed
         },
     )
-
     return guard

@@ -8,12 +8,14 @@ synchronous operations and asyncpg for asynchronous operations.
 
 import time
 import json
-from typing import Any, Dict, Optional, Union, List
+from typing import Any, Dict, Optional, Union, List, TYPE_CHECKING, TypeVar, cast
 from datetime import datetime, timedelta
 
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
 
 # Try to import psycopg2 for synchronous operations
+ASYNCPG_AVAILABLE = False
+PSYCOPG2_AVAILABLE = False
 try:
     import psycopg2
     import psycopg2.extras
@@ -23,12 +25,19 @@ except ImportError:
     PSYCOPG2_AVAILABLE = False
 
 # Try to import asyncpg for asynchronous operations
-try:
+if TYPE_CHECKING:
     import asyncpg
 
-    ASYNCPG_AVAILABLE = True
-except ImportError:
-    ASYNCPG_AVAILABLE = False
+    Pool = asyncpg.Pool
+else:
+    try:
+        import asyncpg
+
+        Pool = asyncpg.Pool
+        ASYNCPG_AVAILABLE = True
+    except ImportError:
+        ASYNCPG_AVAILABLE = False
+        Pool = Any  # type: ignore
 
 
 class PostgreSQLStorage(BaseStorage):
@@ -315,10 +324,10 @@ class AsyncPostgreSQLStorage(AsyncBaseStorage):
         self.table_name = table_name
         self.ttl = ttl
         self.pool_kwargs = kwargs
-        self.pool = None
+        self.pool: Optional[Pool] = None
         self._initialized = False
 
-    async def _get_pool(self) -> asyncpg.Pool:
+    async def _get_pool(self) -> Pool:
         """Get or create the connection pool."""
         if self.pool is None:
             self.pool = await asyncpg.create_pool(self.url, **self.pool_kwargs)

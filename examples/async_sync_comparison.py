@@ -55,7 +55,7 @@ if args.use_async:
     import uvicorn
     from fastapi import FastAPI, Request
     from pywebguard import FastAPIGuard
-    from pywebguard.storage.async_memory import AsyncMemoryStorage
+    from pywebguard.storage.memory import AsyncMemoryStorage
 
     # Create FastAPI app
     app = FastAPI(

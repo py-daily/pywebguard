@@ -41,19 +41,13 @@ class ElasticsearchBackend(LoggingBackend):
         if "username" in config and "password" in config:
             auth = (config["username"], config["password"])
 
-        self.client = Elasticsearch(
-            hosts=config["hosts"],
-            basic_auth=auth
-        )
+        self.client = Elasticsearch(hosts=config["hosts"], basic_auth=auth)
 
         # Create index template if it doesn't exist
         template_name = f"{self.index_prefix}_template"
         template_body = {
             "index_patterns": [f"{self.index_prefix}-*"],
-            "settings": {
-                "number_of_shards": 1,
-                "number_of_replicas": 1
-            },
+            "settings": {"number_of_shards": 1, "number_of_replicas": 1},
             "mappings": {
                 "properties": {
                     "timestamp": {"type": "date"},
@@ -66,16 +60,13 @@ class ElasticsearchBackend(LoggingBackend):
                     "reason": {"type": "text"},
                     "user_agent": {"type": "text"},
                     "event_type": {"type": "keyword"},
-                    "message": {"type": "text"}
+                    "message": {"type": "text"},
                 }
-            }
+            },
         }
 
         if not self.client.indices.exists_template(name=template_name):
-            self.client.indices.put_template(
-                name=template_name,
-                body=template_body
-            )
+            self.client.indices.put_template(name=template_name, body=template_body)
 
     def _get_index_name(self) -> str:
         """
@@ -85,6 +76,7 @@ class ElasticsearchBackend(LoggingBackend):
             Index name string
         """
         from datetime import datetime
+
         date_str = datetime.now().strftime("%Y.%m.%d")
         return f"{self.index_prefix}-{date_str}"
 
@@ -95,10 +87,7 @@ class ElasticsearchBackend(LoggingBackend):
         Returns:
             Dict containing the log entry
         """
-        return {
-            "timestamp": int(time.time() * 1000),  # milliseconds
-            **kwargs
-        }
+        return {"timestamp": int(time.time() * 1000), **kwargs}  # milliseconds
 
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
@@ -115,12 +104,9 @@ class ElasticsearchBackend(LoggingBackend):
             path=request_info.get("path", "unknown"),
             status_code=self._extract_status_code(response),
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="request"
+            event_type="request",
         )
-        self.client.index(
-            index=self._get_index_name(),
-            document=log_entry
-        )
+        self.client.index(index=self._get_index_name(), document=log_entry)
 
     def log_blocked_request(
         self, request_info: Dict[str, Any], block_type: str, reason: str
@@ -141,12 +127,9 @@ class ElasticsearchBackend(LoggingBackend):
             block_type=block_type,
             reason=reason,
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="blocked_request"
+            event_type="blocked_request",
         )
-        self.client.index(
-            index=self._get_index_name(),
-            document=log_entry
-        )
+        self.client.index(index=self._get_index_name(), document=log_entry)
 
     def log_security_event(
         self, level: str, message: str, extra: Optional[Dict[str, Any]] = None
@@ -160,15 +143,9 @@ class ElasticsearchBackend(LoggingBackend):
             extra: Additional information to log
         """
         log_entry = self._create_log_entry(
-            level=level,
-            message=message,
-            event_type="security_event",
-            **(extra or {})
+            level=level, message=message, event_type="security_event", **(extra or {})
         )
-        self.client.index(
-            index=self._get_index_name(),
-            document=log_entry
-        )
+        self.client.index(index=self._get_index_name(), document=log_entry)
 
     def _extract_status_code(self, response: Any) -> int:
         """
@@ -187,4 +164,4 @@ class ElasticsearchBackend(LoggingBackend):
                 return response["status_code"]
         except:
             pass
-        return 0 
+        return 0

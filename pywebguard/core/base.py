@@ -421,12 +421,20 @@ class Guard:
                 "headers": Dict[str, str]
             }
         """
+        # Parse query string into a dictionary
+        query_dict = {}
+        if request.query_string:
+            for param in request.query_string.split("&"):
+                if "=" in param:
+                    key, value = param.split("=", 1)
+                    query_dict[key] = value
+
         return {
             "ip": request.remote_addr,
             "user_agent": request.user_agent,
             "method": request.method,
             "path": request.path,
-            "query": dict(request.query_string.split("&")),
+            "query": query_dict,
             "headers": request.headers,
         }
 
@@ -724,11 +732,19 @@ class AsyncGuard:
                 "headers": Dict[str, str]
             }
         """
+        # Parse query string into a dictionary
+        query_dict = {}
+        if request.query_string:
+            for param in request.query_string.split("&"):
+                if "=" in param:
+                    key, value = param.split("=", 1)
+                    query_dict[key] = value
+
         return {
             "ip": request.remote_addr,
             "user_agent": request.user_agent,
             "method": request.method,
             "path": request.path,
-            "query": dict(request.query_string.split("&")),
+            "query": query_dict,
             "headers": request.headers,
         }

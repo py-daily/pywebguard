@@ -85,13 +85,14 @@ class MemoryStorage(BaseStorage):
         self._storage.pop(key, None)
         self._ttls.pop(key, None)
 
-    def increment(self, key: str, amount: int = 1) -> int:
+    def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
         """
         Increment a counter in storage.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
@@ -100,12 +101,20 @@ class MemoryStorage(BaseStorage):
             ValueError: If the current value is not numeric
         """
         self._clean_expired()
+        is_new = key not in self._storage
         current = self._storage.get(key, 0)
         if not isinstance(current, (int, float)):
             raise ValueError(f"Current value for key {key} is not numeric")
 
         new_value = current + amount
         self._storage[key] = new_value
+
+        if ttl is not None and is_new:
+            self._ttls[key] = time.time() + ttl
+        elif key in self._ttls and (ttl is None or not is_new):
+            # Don't update TTL if not new
+            pass
+
         return new_value
 
     def exists(self, key: str) -> bool:
@@ -180,13 +189,16 @@ class AsyncMemoryStorage(AsyncBaseStorage):
         """
         self._storage.delete(key)
 
-    async def increment(self, key: str, amount: int = 1) -> int:
+    async def increment(
+        self, key: str, amount: int = 1, ttl: Optional[int] = None
+    ) -> int:
         """
         Increment a counter in storage asynchronously.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
@@ -194,7 +206,7 @@ class AsyncMemoryStorage(AsyncBaseStorage):
         Raises:
             ValueError: If the current value is not numeric
         """
-        return self._storage.increment(key, amount)
+        return self._storage.increment(key, amount, ttl)
 
     async def exists(self, key: str) -> bool:
         """

@@ -16,7 +16,7 @@ class LoggingBackend(ABC):
     def setup(self, config: Any) -> None:
         """
         Set up the logging backend with the given configuration.
-        
+
         Args:
             config: Configuration specific to the backend
         """
@@ -26,7 +26,7 @@ class LoggingBackend(ABC):
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
         Log a request.
-        
+
         Args:
             request_info: Dict with request information
             response: The framework-specific response object
@@ -39,7 +39,7 @@ class LoggingBackend(ABC):
     ) -> None:
         """
         Log a blocked request.
-        
+
         Args:
             request_info: Dict with request information
             block_type: Type of block (IP filter, rate limit, etc.)
@@ -53,10 +53,10 @@ class LoggingBackend(ABC):
     ) -> None:
         """
         Log a security event.
-        
+
         Args:
             level: Log level (INFO, WARNING, ERROR, etc.)
             message: The log message
             extra: Additional information to log
         """
-        pass 
+        pass

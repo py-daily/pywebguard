@@ -4,8 +4,18 @@ MongoDB logging backend for PyWebGuard.
 
 import time
 import logging
-from typing import Dict, Any, Optional
-from pymongo import MongoClient
+from typing import Dict, Any, Optional, TYPE_CHECKING
+
+# Try to import pymongo
+try:
+    from pymongo import MongoClient
+
+    PYMONGO_AVAILABLE = True
+except ImportError:
+    PYMONGO_AVAILABLE = False
+    if TYPE_CHECKING:
+        from pymongo import MongoClient
+
 from ..base import LoggingBackend
 
 
@@ -25,7 +35,15 @@ class MongoDBBackend(LoggingBackend):
                 - collection: Collection name
                 - username: Optional username for authentication
                 - password: Optional password for authentication
+
+        Raises:
+            ImportError: If pymongo is not installed
         """
+        if not PYMONGO_AVAILABLE:
+            raise ImportError(
+                "MongoDB backend requires pymongo. Install it with 'pip install pymongo'"
+            )
+
         self.config = config
         self.client = None
         self.collection = None
@@ -63,10 +81,7 @@ class MongoDBBackend(LoggingBackend):
         Returns:
             Dict containing the log entry
         """
-        return {
-            "timestamp": int(time.time() * 1000),  # milliseconds
-            **kwargs
-        }
+        return {"timestamp": int(time.time() * 1000), **kwargs}  # milliseconds
 
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
@@ -83,7 +98,7 @@ class MongoDBBackend(LoggingBackend):
             path=request_info.get("path", "unknown"),
             status_code=self._extract_status_code(response),
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="request"
+            event_type="request",
         )
         self.collection.insert_one(log_entry)
 
@@ -106,7 +121,7 @@ class MongoDBBackend(LoggingBackend):
             block_type=block_type,
             reason=reason,
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="blocked_request"
+            event_type="blocked_request",
         )
         self.collection.insert_one(log_entry)
 
@@ -122,10 +137,7 @@ class MongoDBBackend(LoggingBackend):
             extra: Additional information to log
         """
         log_entry = self._create_log_entry(
-            level=level,
-            message=message,
-            event_type="security_event",
-            **(extra or {})
+            level=level, message=message, event_type="security_event", **(extra or {})
         )
         self.collection.insert_one(log_entry)
 
@@ -146,4 +158,4 @@ class MongoDBBackend(LoggingBackend):
                 return response["status_code"]
         except:
             pass
-        return 0 
+        return 0

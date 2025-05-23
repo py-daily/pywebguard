@@ -27,10 +27,10 @@ from typing import Dict, List, Optional, Union, Any, Callable
 
 # Import PyWebGuard components
 from pywebguard import FastAPIGuard, GuardConfig, RateLimitConfig
-from pywebguard.storage.async_memory import AsyncMemoryStorage
+from pywebguard.storage.memory import AsyncMemoryStorage
 
 # Uncomment to use Redis storage instead
-# from pywebguard.storage.async_redis import AsyncRedisStorage
+# from pywebguard.storage.redis import AsyncRedisStorage
 
 # Configure logging
 logging.basicConfig(

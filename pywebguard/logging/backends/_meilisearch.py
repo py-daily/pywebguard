@@ -4,8 +4,18 @@ Meilisearch logging backend for PyWebGuard.
 
 import time
 import logging
-from typing import Dict, Any, Optional
-import meilisearch
+from typing import Dict, Any, Optional, TYPE_CHECKING
+
+# Try to import meilisearch
+try:
+    import meilisearch
+
+    MEILISEARCH_AVAILABLE = True
+except ImportError:
+    MEILISEARCH_AVAILABLE = False
+    if TYPE_CHECKING:
+        import meilisearch
+
 from ..base import LoggingBackend
 
 
@@ -23,7 +33,15 @@ class MeilisearchBackend(LoggingBackend):
                 - url: Meilisearch server URL
                 - api_key: Meilisearch API key
                 - index_name: Name of the index to store logs
+
+        Raises:
+            ImportError: If meilisearch is not installed
         """
+        if not MEILISEARCH_AVAILABLE:
+            raise ImportError(
+                "Meilisearch backend requires meilisearch. Install it with 'pip install meilisearch'"
+            )
+
         self.config = config
         self.client = None
         self.index = None
@@ -36,29 +54,24 @@ class MeilisearchBackend(LoggingBackend):
         Args:
             config: Configuration dictionary
         """
-        self.client = meilisearch.Client(
-            config["url"],
-            config["api_key"]
-        )
+        self.client = meilisearch.Client(config["url"], config["api_key"])
         self.index = self.client.index(config["index_name"])
-        
+
         # Ensure timestamp and other fields are filterable
-        self.index.update_filterable_attributes([
-            "timestamp",
-            "level",
-            "ip",
-            "method",
-            "path",
-            "status_code",
-            "block_type",
-            "reason"
-        ])
-        
-        self.index.update_sortable_attributes([
-            "timestamp",
-            "level",
-            "status_code"
-        ])
+        self.index.update_filterable_attributes(
+            [
+                "timestamp",
+                "level",
+                "ip",
+                "method",
+                "path",
+                "status_code",
+                "block_type",
+                "reason",
+            ]
+        )
+
+        self.index.update_sortable_attributes(["timestamp", "level", "status_code"])
 
     def _create_log_entry(self, **kwargs) -> Dict[str, Any]:
         """
@@ -70,7 +83,7 @@ class MeilisearchBackend(LoggingBackend):
         return {
             "id": f"{int(time.time() * 1000)}-{kwargs.get('level', 'INFO')}",
             "timestamp": int(time.time()),
-            **kwargs
+            **kwargs,
         }
 
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
@@ -88,7 +101,7 @@ class MeilisearchBackend(LoggingBackend):
             path=request_info.get("path", "unknown"),
             status_code=self._extract_status_code(response),
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="request"
+            event_type="request",
         )
         self.index.add_documents([log_entry])
 
@@ -111,7 +124,7 @@ class MeilisearchBackend(LoggingBackend):
             block_type=block_type,
             reason=reason,
             user_agent=request_info.get("user_agent", "unknown"),
-            event_type="blocked_request"
+            event_type="blocked_request",
         )
         self.index.add_documents([log_entry])
 
@@ -127,10 +140,7 @@ class MeilisearchBackend(LoggingBackend):
             extra: Additional information to log
         """
         log_entry = self._create_log_entry(
-            level=level,
-            message=message,
-            event_type="security_event",
-            **(extra or {})
+            level=level, message=message, event_type="security_event", **(extra or {})
         )
         self.index.add_documents([log_entry])
 
@@ -151,4 +161,4 @@ class MeilisearchBackend(LoggingBackend):
                 return response["status_code"]
         except:
             pass
-        return 0 
+        return 0

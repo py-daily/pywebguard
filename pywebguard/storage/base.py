@@ -75,13 +75,14 @@ class StorageProtocol(Protocol):
         """
         ...
 
-    def increment(self, key: str, amount: int = 1) -> int:
+    def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
         """
         Increment a counter in storage.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
@@ -143,13 +144,16 @@ class AsyncStorageProtocol(Protocol):
         """
         ...
 
-    async def increment(self, key: str, amount: int = 1) -> int:
+    async def increment(
+        self, key: str, amount: int = 1, ttl: Optional[int] = None
+    ) -> int:
         """
         Increment a counter in storage asynchronously.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
@@ -207,13 +211,14 @@ class BaseStorage(ABC):
         pass
 
     @abstractmethod
-    def increment(self, key: str, amount: int = 1) -> int:
+    def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
         """
         Increment a counter in storage.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
@@ -285,13 +290,16 @@ class AsyncBaseStorage(ABC):
         pass
 
     @abstractmethod
-    async def increment(self, key: str, amount: int = 1) -> int:
+    async def increment(
+        self, key: str, amount: int = 1, ttl: Optional[int] = None
+    ) -> int:
         """
         Increment a counter in storage asynchronously.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value

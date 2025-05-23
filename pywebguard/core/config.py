@@ -64,7 +64,7 @@ class RateLimitConfig(BaseModel):
 
     enabled: bool = True
     requests_per_minute: int = Field(default=60, ge=1)
-    burst_size: int = Field(default=10, ge=1)
+    burst_size: int = Field(default=10, ge=0)
     auto_ban_threshold: int = Field(default=100, ge=1)
     auto_ban_duration_minutes: int = Field(default=60, ge=1)
 
@@ -150,7 +150,7 @@ class LoggingConfig(BaseModel):
     log_rotation: str = Field(default="midnight")
     log_backup_count: int = Field(default=3)
     log_encoding: str = Field(default="utf-8")
-    
+
     # Backend configurations
     meilisearch: Optional[Dict[str, Any]] = None
     elasticsearch: Optional[Dict[str, Any]] = None
@@ -175,7 +175,9 @@ class LoggingConfig(BaseModel):
         return v.upper()
 
     @field_validator("meilisearch")
-    def validate_meilisearch(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def validate_meilisearch(
+        cls, v: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """Validate Meilisearch configuration.
 
         Args:
@@ -197,7 +199,9 @@ class LoggingConfig(BaseModel):
         return v
 
     @field_validator("elasticsearch")
-    def validate_elasticsearch(cls, v: Optional[Dict[str, Any]]) -> Optional[Dict[str, Any]]:
+    def validate_elasticsearch(
+        cls, v: Optional[Dict[str, Any]]
+    ) -> Optional[Dict[str, Any]]:
         """Validate Elasticsearch configuration.
 
         Args:
@@ -235,7 +239,9 @@ class LoggingConfig(BaseModel):
             return None
 
         # Check if URI is provided or if host/port are provided
-        if "uri" not in v and not all(k in v for k in ["host", "port", "database", "collection"]):
+        if "uri" not in v and not all(
+            k in v for k in ["host", "port", "database", "collection"]
+        ):
             raise ValueError(
                 "MongoDB configuration must include either 'uri' or all of 'host', 'port', 'database', and 'collection'"
             )

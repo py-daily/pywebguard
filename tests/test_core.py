@@ -5,7 +5,12 @@ from datetime import datetime
 from typing import Dict, Any, cast
 
 from pywebguard.core.base import Guard, AsyncGuard
-from pywebguard.core.config import GuardConfig, IPFilterConfig, RateLimitConfig
+from pywebguard.core.config import (
+    GuardConfig,
+    IPFilterConfig,
+    RateLimitConfig,
+    StorageConfig,
+)
 from tests.conftest import MockRequest, MockResponse
 
 
@@ -27,15 +32,18 @@ def test_async_guard_initialization(basic_config: GuardConfig):
 
 def test_guard_default_initialization():
     """Test Guard initialization with default configuration."""
-    guard = Guard()
+    config = GuardConfig(storage=StorageConfig(type="memory"))
+    guard = Guard(config=config)
     assert guard.config is not None
     assert isinstance(guard.config, GuardConfig)
     assert guard.storage is not None
 
 
-def test_async_guard_default_initialization():
+@pytest.mark.asyncio
+async def test_async_guard_default_initialization():
     """Test AsyncGuard initialization with default configuration."""
-    guard = AsyncGuard()
+    config = GuardConfig(storage=StorageConfig(type="memory"))
+    guard = AsyncGuard(config=config, storage=StorageConfig(type="memory"))
     assert guard.config is not None
     assert isinstance(guard.config, GuardConfig)
     assert guard.storage is not None
