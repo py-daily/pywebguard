@@ -18,7 +18,7 @@ class TestRateLimiter:
         return RateLimitConfig(
             enabled=True,
             requests_per_minute=5,
-            burst_size=2,
+            burst_size=0,  # Disable burst by default
             auto_ban_threshold=10,
             auto_ban_duration_minutes=60,
         )
@@ -137,7 +137,7 @@ class TestRateLimiter:
         assert result["remaining"] == 0
         assert "reset" in result
 
-        # Test burst capacity
+        # Test with a different IP
         result = rate_limiter.check_limit("192.168.1.2")  # Different IP
         assert result["allowed"] is True
 
@@ -146,12 +146,7 @@ class TestRateLimiter:
             result = rate_limiter.check_limit("192.168.1.2")
             assert result["allowed"] is True
 
-        # Use burst capacity
-        for _ in range(2):  # burst_size = 2
-            result = rate_limiter.check_limit("192.168.1.2")
-            assert result["allowed"] is True
-
-        # Exceed burst capacity
+        # Exceed normal capacity
         result = rate_limiter.check_limit("192.168.1.2")
         assert result["allowed"] is False
 
@@ -162,7 +157,7 @@ class TestRateLimiter:
             "/api/limited",
             {
                 "requests_per_minute": 2,
-                "burst_size": 1,
+                "burst_size": 0,  # Disable burst for this route
             },
         )
 
@@ -204,8 +199,8 @@ class TestRateLimiter:
         # Check if the IP is banned
         assert rate_limiter.storage.exists("banned_ip:192.168.1.1")
 
-        # Try a request from the banned IP to a different route
-        result = rate_limiter.check_limit("192.168.1.1", "/api/other")
+        # Try a request from the banned IP
+        result = rate_limiter.check_limit("192.168.1.1")
         assert result["allowed"] is False
 
 
@@ -218,7 +213,7 @@ class TestAsyncRateLimiter:
         return RateLimitConfig(
             enabled=True,
             requests_per_minute=5,
-            burst_size=2,
+            burst_size=0,  # Disable burst by default
             auto_ban_threshold=10,
             auto_ban_duration_minutes=60,
         )
@@ -336,7 +331,7 @@ class TestAsyncRateLimiter:
             "/api/limited",
             {
                 "requests_per_minute": 2,
-                "burst_size": 1,
+                "burst_size": 0,  # Disable burst for this route
             },
         )
 

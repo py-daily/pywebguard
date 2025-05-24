@@ -132,56 +132,58 @@ class RateLimiter(BaseLimiter):
 
         # Get current count for this minute
         count = self.storage.get(window_key) or 0
+        print(
+            f"[DEBUG] check_limit: identifier={identifier}, path={path}, count={count}"
+        )
+        if count < config.requests_per_minute:
+            new_count = self.storage.increment(window_key, 1, 60)
+            remaining = max(0, config.requests_per_minute - new_count)
+            reset_time = (current_time // 60 + 1) * 60
+            result = {"allowed": True, "remaining": remaining, "reset": reset_time}
+            print(
+                f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
+            )
+            return result
+        else:
+            # Check if burst is enabled and available
+            if config.burst_size > 0:
+                burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
+                burst_count = self.storage.get(burst_key) or 0
+                print(
+                    f"[DEBUG] Burst check: burst_count={burst_count}, burst_size={config.burst_size}"
+                )
+                if burst_count < config.burst_size:
+                    self.storage.increment(burst_key, 1, 3600)
+                    reset_time = (current_time // 60 + 1) * 60
+                    result = {"allowed": True, "remaining": 0, "reset": reset_time}
+                    print(f"[DEBUG] Allowed by burst: result={result}")
+                    return result
 
-        # Check if rate limit is exceeded
-        if count >= config.requests_per_minute:
-            # Check if burst capacity is available
-            burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
-            burst_count = self.storage.get(burst_key) or 0
-
-            if burst_count >= config.burst_size:
-                # Rate limit exceeded
-                reset_time = (current_time // 60 + 1) * 60
-
-                # Check for auto-ban threshold
-                if config.auto_ban_threshold > 0:
-                    violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
-                    violations = self.storage.increment(
-                        violation_key, 1, 86400
-                    )  # 24 hour TTL
-
-                    if violations >= config.auto_ban_threshold:
-                        # Auto-ban the identifier
-                        ban_key = f"banned_ip:{identifier}"
-                        self.storage.set(
-                            ban_key,
-                            {
-                                "reason": f"Rate limit exceeded for {path or 'global'}",
-                                "timestamp": current_time,
-                            },
-                            config.auto_ban_duration_minutes * 60,
-                        )
-
-                return {
-                    "allowed": False,
-                    "remaining": 0,
-                    "reset": reset_time,
-                    "reason": f"Rate limit exceeded for {path or 'global'}",
-                }
-
-            # Use burst capacity
-            self.storage.increment(burst_key, 1, 3600)  # 1 hour TTL
-
-        # Increment the counter
-        new_count = self.storage.increment(window_key, 1, 60)  # 1 minute TTL
-
-        # Calculate remaining requests
-        remaining = max(0, config.requests_per_minute - new_count)
-
-        # Calculate reset time
-        reset_time = (current_time // 60 + 1) * 60
-
-        return {"allowed": True, "remaining": remaining, "reset": reset_time}
+            # Block the request if no burst available or burst not enabled
+            reset_time = (current_time // 60 + 1) * 60
+            if config.auto_ban_threshold > 0:
+                violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
+                violations = self.storage.increment(
+                    violation_key, 1, 86400
+                )  # 24 hour TTL
+                if violations >= config.auto_ban_threshold:
+                    ban_key = f"banned_ip:{identifier}"
+                    self.storage.set(
+                        ban_key,
+                        {
+                            "reason": f"Rate limit exceeded for {path or 'global'}",
+                            "timestamp": current_time,
+                        },
+                        config.auto_ban_duration_minutes * 60,
+                    )
+            result = {
+                "allowed": False,
+                "remaining": 0,
+                "reset": reset_time,
+                "reason": f"Rate limit exceeded for {path or 'global'}",
+            }
+            print(f"[DEBUG] Blocked: result={result}")
+            return result
 
 
 class AsyncRateLimiter(AsyncBaseLimiter):
@@ -306,53 +308,55 @@ class AsyncRateLimiter(AsyncBaseLimiter):
 
         # Get current count for this minute
         count = await self.storage.get(window_key) or 0
+        print(
+            f"[DEBUG] async_check_limit: identifier={identifier}, path={path}, count={count}"
+        )
+        if count < config.requests_per_minute:
+            new_count = await self.storage.increment(window_key, 1, 60)
+            remaining = max(0, config.requests_per_minute - new_count)
+            reset_time = (current_time // 60 + 1) * 60
+            result = {"allowed": True, "remaining": remaining, "reset": reset_time}
+            print(
+                f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
+            )
+            return result
+        else:
+            # Check if burst is enabled and available
+            if config.burst_size > 0:
+                burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
+                burst_count = await self.storage.get(burst_key) or 0
+                print(
+                    f"[DEBUG] Burst check: burst_count={burst_count}, burst_size={config.burst_size}"
+                )
+                if burst_count < config.burst_size:
+                    await self.storage.increment(burst_key, 1, 3600)
+                    reset_time = (current_time // 60 + 1) * 60
+                    result = {"allowed": True, "remaining": 0, "reset": reset_time}
+                    print(f"[DEBUG] Allowed by burst: result={result}")
+                    return result
 
-        # Check if rate limit is exceeded
-        if count >= config.requests_per_minute:
-            # Check if burst capacity is available
-            burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
-            burst_count = await self.storage.get(burst_key) or 0
-
-            if burst_count >= config.burst_size:
-                # Rate limit exceeded
-                reset_time = (current_time // 60 + 1) * 60
-
-                # Check for auto-ban threshold
-                if config.auto_ban_threshold > 0:
-                    violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
-                    violations = await self.storage.increment(
-                        violation_key, 1, 86400
-                    )  # 24 hour TTL
-
-                    if violations >= config.auto_ban_threshold:
-                        # Auto-ban the identifier
-                        ban_key = f"banned_ip:{identifier}"
-                        await self.storage.set(
-                            ban_key,
-                            {
-                                "reason": f"Rate limit exceeded for {path or 'global'}",
-                                "timestamp": current_time,
-                            },
-                            config.auto_ban_duration_minutes * 60,
-                        )
-
-                return {
-                    "allowed": False,
-                    "remaining": 0,
-                    "reset": reset_time,
-                    "reason": f"Rate limit exceeded for {path or 'global'}",
-                }
-
-            # Use burst capacity
-            await self.storage.increment(burst_key, 1, 3600)  # 1 hour TTL
-
-        # Increment the counter
-        new_count = await self.storage.increment(window_key, 1, 60)  # 1 minute TTL
-
-        # Calculate remaining requests
-        remaining = max(0, config.requests_per_minute - new_count)
-
-        # Calculate reset time
-        reset_time = (current_time // 60 + 1) * 60
-
-        return {"allowed": True, "remaining": remaining, "reset": reset_time}
+            # Block the request if no burst available or burst not enabled
+            reset_time = (current_time // 60 + 1) * 60
+            if config.auto_ban_threshold > 0:
+                violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
+                violations = await self.storage.increment(
+                    violation_key, 1, 86400
+                )  # 24 hour TTL
+                if violations >= config.auto_ban_threshold:
+                    ban_key = f"banned_ip:{identifier}"
+                    await self.storage.set(
+                        ban_key,
+                        {
+                            "reason": f"Rate limit exceeded for {path or 'global'}",
+                            "timestamp": current_time,
+                        },
+                        config.auto_ban_duration_minutes * 60,
+                    )
+            result = {
+                "allowed": False,
+                "remaining": 0,
+                "reset": reset_time,
+                "reason": f"Rate limit exceeded for {path or 'global'}",
+            }
+            print(f"[DEBUG] Blocked: result={result}")
+            return result
