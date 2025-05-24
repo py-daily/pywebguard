@@ -57,9 +57,10 @@ class TinyDBStorage(BaseStorage):
     def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
         now = time.time()
-        expired = self.table.search(Query().expiry <= now)
+        # Only consider entries that have an expiry value and are expired
+        expired = self.table.search((Query().expiry != None) & (Query().expiry <= now))
         if expired:
-            self.table.remove(Query().expiry <= now)
+            self.table.remove((Query().expiry != None) & (Query().expiry <= now))
 
     def get(self, key: str) -> Optional[Any]:
         """
@@ -177,9 +178,10 @@ class AsyncTinyDBStorage(AsyncBaseStorage):
     async def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
         now = time.time()
-        expired = self.table.search(Query().expiry <= now)
+        # Only consider entries that have an expiry value and are expired
+        expired = self.table.search((Query().expiry != None) & (Query().expiry <= now))
         if expired:
-            self.table.remove(Query().expiry <= now)
+            self.table.remove((Query().expiry != None) & (Query().expiry <= now))
 
     async def get(self, key: str) -> Optional[Any]:
         """
