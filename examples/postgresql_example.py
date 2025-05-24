@@ -6,11 +6,11 @@ including environment variable configuration.
 
 To run this example:
     pip install flask pywebguard psycopg2-binary
-    
+
     # Set environment variables
     export PYWEBGUARD_STORAGE_TYPE=postgresql
     export PYWEBGUARD_STORAGE_URL=postgresql://postgres:postgres@localhost:5432/pywebguard
-    
+
     python postgresql_example.py
 """
 

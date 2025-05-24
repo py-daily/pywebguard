@@ -6,11 +6,11 @@ including environment variable configuration.
 
 To run this example:
     pip install fastapi uvicorn pywebguard pymongo
-    
+
     # Set environment variables
     export PYWEBGUARD_STORAGE_TYPE=mongodb
     export PYWEBGUARD_STORAGE_URL=mongodb://localhost:27017/pywebguard
-    
+
     python mongodb_example.py
 """
 

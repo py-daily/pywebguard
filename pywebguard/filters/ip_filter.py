@@ -70,22 +70,26 @@ class IPFilter(BaseFilter):
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
+        # Re-parse networks in case config changed at runtime
+        self.whitelist_networks = self._parse_ip_networks(self.config.whitelist)
+        self.blacklist_networks = self._parse_ip_networks(self.config.blacklist)
+
         try:
             ip = ipaddress.ip_address(ip_address)
 
-            # Check if IP is in whitelist
+            # Check if IP is banned (highest priority)
+            if self.storage.exists(f"banned_ip:{ip_address}"):
+                return {"allowed": False, "reason": "IP is banned"}
+
+            # Check if IP is in blacklist (second priority)
+            if self._is_ip_in_networks(ip, self.blacklist_networks):
+                return {"allowed": False, "reason": "IP in blacklist"}
+
+            # Check if IP is in whitelist (lowest priority)
             if self.whitelist_networks and not self._is_ip_in_networks(
                 ip, self.whitelist_networks
             ):
                 return {"allowed": False, "reason": "IP not in whitelist"}
-
-            # Check if IP is in blacklist
-            if self._is_ip_in_networks(ip, self.blacklist_networks):
-                return {"allowed": False, "reason": "IP in blacklist"}
-
-            # Check if IP is banned
-            if self.storage.exists(f"banned_ip:{ip_address}"):
-                return {"allowed": False, "reason": "IP is banned"}
 
             # Additional checks for cloud providers, geolocation, etc. would go here
 
@@ -178,22 +182,26 @@ class AsyncIPFilter(AsyncBaseFilter):
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
+        # Re-parse networks in case config changed at runtime
+        self.whitelist_networks = self._parse_ip_networks(self.config.whitelist)
+        self.blacklist_networks = self._parse_ip_networks(self.config.blacklist)
+
         try:
             ip = ipaddress.ip_address(ip_address)
 
-            # Check if IP is in whitelist
+            # Check if IP is banned (highest priority)
+            if await self.storage.exists(f"banned_ip:{ip_address}"):
+                return {"allowed": False, "reason": "IP is banned"}
+
+            # Check if IP is in blacklist (second priority)
+            if self._is_ip_in_networks(ip, self.blacklist_networks):
+                return {"allowed": False, "reason": "IP in blacklist"}
+
+            # Check if IP is in whitelist (lowest priority)
             if self.whitelist_networks and not self._is_ip_in_networks(
                 ip, self.whitelist_networks
             ):
                 return {"allowed": False, "reason": "IP not in whitelist"}
-
-            # Check if IP is in blacklist
-            if self._is_ip_in_networks(ip, self.blacklist_networks):
-                return {"allowed": False, "reason": "IP in blacklist"}
-
-            # Check if IP is banned
-            if await self.storage.exists(f"banned_ip:{ip_address}"):
-                return {"allowed": False, "reason": "IP is banned"}
 
             # Additional checks for cloud providers, geolocation, etc. would go here
 

@@ -45,7 +45,11 @@ class IPFilterConfig(BaseModel):
 
         for ip in v:
             try:
-                ipaddress.ip_address(ip)
+                # Handle CIDR notation
+                if "/" in ip:
+                    ipaddress.ip_network(ip, strict=False)
+                else:
+                    ipaddress.ip_address(ip)
             except ValueError as e:
                 raise ValueError(f"Invalid IP address: {ip}") from e
         return v
