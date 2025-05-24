@@ -53,13 +53,13 @@ def get_request_path(request: Any) -> str:
         The request path
     """
     # Try common attributes for different frameworks
-    if hasattr(request, "path"):
+    if hasattr(request, "path") and request.path:
         return request.path
 
-    if hasattr(request, "url") and hasattr(request.url, "path"):
+    if hasattr(request, "url") and hasattr(request.url, "path") and request.url.path:
         return request.url.path
 
-    if hasattr(request, "path_info"):
+    if hasattr(request, "path_info") and request.path_info:
         return request.path_info
 
     return ""
