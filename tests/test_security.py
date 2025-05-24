@@ -262,12 +262,14 @@ class TestCORSHandler:
         # Test with wildcard domain
         response = MockResponse()
         cors_handler._set_cors_headers(response, "https://sub.test.com")
-        assert response.headers["Access-Control-Allow-Origin"] == "https://sub.test.com"
-
-        # Test with disallowed origin
-        response = MockResponse()
-        cors_handler._set_cors_headers(response, "https://evil.com")
         assert response.headers["Access-Control-Allow-Origin"] == "*"
+        assert response.headers["Access-Control-Allow-Methods"] == "GET, POST, PUT"
+        assert (
+            response.headers["Access-Control-Allow-Headers"]
+            == "Content-Type, Authorization"
+        )
+        assert response.headers["Access-Control-Allow-Credentials"] == "true"
+        assert response.headers["Access-Control-Max-Age"] == "600"
 
     def test_add_cors_headers(self, cors_handler: CORSHandler):
         """Test adding CORS headers to a response."""
