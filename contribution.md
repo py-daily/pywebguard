@@ -85,3 +85,4 @@ We use Black for code formatting. Ensure you run Black on your code before submi
 
 ```sh
 black .
+```
