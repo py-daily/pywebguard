@@ -327,7 +327,6 @@ if __name__ == "__main__":
 
 
 ## Documentation
-
 - [Installation Guide](docs/installation.md)
 - [CLI Usage](docs/cli.md)
 - [Core Features](docs/core/)
@@ -339,6 +338,7 @@ if __name__ == "__main__":
 <a href="https://github.com/py-daily/pywebguard/graphs/contributors">
   <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" width="80" />
 </a>
+
 
 ## License
 
