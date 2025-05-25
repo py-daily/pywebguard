@@ -1,0 +1,62 @@
+name: General Issue
+description: Report bugs, request features, or suggest improvements for PyWebGuard.
+title: "[PyWebGuard] - "
+labels: []
+assignees: []
+
+body:
+  - type: dropdown
+    id: issue_type
+    attributes:
+      label: What type of issue is this?
+      description: Helps us triage and prioritize the issue.
+      options:
+        - 🐛 Bug Report
+        - ✨ Feature Request
+        - 📚 Documentation
+        - 💡 Enhancement
+        - ❓ Question/Support
+    validations:
+      required: true
+
+  - type: input
+    id: summary
+    attributes:
+      label: Summary
+      placeholder: "e.g. Rate limiting not working on async routes"
+    validations:
+      required: true
+
+  - type: textarea
+    id: details
+    attributes:
+      label: Details / Steps to Reproduce / Proposal
+      description: Add as much context as possible—error logs, stack traces, use cases, or feature ideas.
+      placeholder: |
+        - What happened?
+        - How to reproduce the bug (if any)?
+        - What would you like to see improved?
+        - Any screenshots or logs?
+    validations:
+      required: false
+
+  - type: checkboxes
+    id: scope_check
+    attributes:
+      label: Related Areas
+      description: Which part of PyWebGuard does this relate to?
+      options:
+        - label: IP Filtering / Banning
+        - label: Rate Limiting (Global / Per-Route)
+        - label: Middleware Integration (FastAPI / Flask)
+        - label: Logging or Monitoring
+        - label: CORS / Geolocation / Storage
+        - label: Other
+
+  - type: checkboxes
+    id: conduct
+    attributes:
+      label: Code of Conduct
+      options:
+        - label: I agree to follow this project's [Code of Conduct](../blob/main/CODE_OF_CONDUCT.md)
+          required: true
