@@ -77,17 +77,17 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: markdown
           message: |
-            *🚀 PyWebGuard Pipeline Status*
+            🚀 *PyWebGuard Pipeline Status*
 
-            *👤 Actor:* `${{ github.actor }}`
-            *📦 Repository:* `${{ github.repository }}`
-            *🔄 Branch:* `${{ github.ref_name }}`
-            *📝 Commit:* `${{ github.sha }}`
-            *💬 Message:* `${{ github.event.head_commit.message }}`
+            👤 *Actor:* `${{ github.actor }}`
+            📦 *Repository:* `${{ github.repository }}`
+            🔄 *Branch:* `${{ github.ref_name }}`
+            📝 *Commit:* `${{ github.sha }}`
+            💬 *Message:* `${{ github.event.head_commit.message }}`
 
-            *📊 Test Coverage:* `${{ steps.coverage.outputs.coverage }}%`
+            📊 *Test Coverage:* `${{ steps.coverage.outputs.coverage }}%`
 
-            *🔍 Coverage Report:* [View Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+            🔍 *Coverage Report:* [View Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             *Status:* `${{ job.status }}`
 
