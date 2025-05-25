@@ -75,20 +75,21 @@ jobs:
         with:
           to: ${{ secrets.TELEGRAM_TO }}
           token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
           message: |
-            🚀 PyWebGuard Pipeline Status
-            
-            👤 Actor: ${{ github.actor }}
-            📦 Repository: ${{ github.repository }}
-            🔄 Branch: ${{ github.ref }}
-            📝 Commit: ${{ github.sha }}
-            💬 Message: ${{ github.event.head_commit.message }}
-            
-            📊 Test Coverage: ${{ steps.coverage.outputs.coverage }}%
-            
-            🔍 Coverage Report: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
-            
-            Status: ${{ job.status }}
+            *🚀 PyWebGuard Pipeline Status*
+
+            *👤 Actor:* `${{ github.actor }}`
+            *📦 Repository:* `${{ github.repository }}`
+            *🔄 Branch:* `${{ github.ref_name }}`
+            *📝 Commit:* `${{ github.sha }}`
+            *💬 Message:* `${{ github.event.head_commit.message }}`
+
+            *📊 Test Coverage:* `${{ steps.coverage.outputs.coverage }}%`
+
+            *🔍 Coverage Report:* [View Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            *Status:* `${{ job.status }}`
 
       - name: Automatic Tagging of Releases
         uses: rymndhng/release-on-push-action@master
