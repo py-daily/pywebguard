@@ -8,21 +8,21 @@
   "commitConvention": "angular",
   "contributors": [
     {
+    "login": "Kalkulus1",
+    "name": "Mumuni Mohammed",
+    "avatar_url": "https://avatars.githubusercontent.com/u/43080869?v=4",
+    "profile": "https://www.ktechhub.com",
+    "contributions": [
+        "projectManagement"
+    ]
+    },
+    {
       "login": "hussein6065",
       "name": "Hussein Baba Fuseini",
       "avatar_url": "https://avatars.githubusercontent.com/u/43960479?v=4",
       "profile": "https://github.com/hussein6065",
       "contributions": [
         "doc"
-      ]
-    },
-    {
-      "login": "Kalkulus1",
-      "name": "Mumuni Mohammed",
-      "avatar_url": "https://avatars.githubusercontent.com/u/43080869?v=4",
-      "profile": "https://www.ktechhub.com",
-      "contributions": [
-        "projectManagement"
       ]
     }
   ],

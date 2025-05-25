@@ -64,8 +64,8 @@ Check the `examples` folder.
 <table>
   <tbody>
     <tr>
-      <td align="center" valign="top" width="14.28%"><a href="https://github.com/hussein6065"><img src="https://avatars.githubusercontent.com/u/43960479?v=4?s=100" width="100px;" alt="Hussein Baba Fuseini"/><br /><sub><b>Hussein Baba Fuseini</b></sub></a><br /><a href="https://github.com/py-daily/pywebguard/commits?author=hussein6065" title="Documentation">📖</a></td>
       <td align="center" valign="top" width="14.28%"><a href="https://www.ktechhub.com"><img src="https://avatars.githubusercontent.com/u/43080869?v=4?s=100" width="100px;" alt="Mumuni Mohammed"/><br /><sub><b>Mumuni Mohammed</b></sub></a><br /><a href="#projectManagement-Kalkulus1" title="Project Management">📆</a></td>
+      <td align="center" valign="top" width="14.28%"><a href="https://github.com/hussein6065"><img src="https://avatars.githubusercontent.com/u/43960479?v=4?s=100" width="100px;" alt="Hussein Baba Fuseini"/><br /><sub><b>Hussein Baba Fuseini</b></sub></a><br /><a href="https://github.com/py-daily/pywebguard/commits?author=hussein6065" title="Documentation">📖</a></td>
     </tr>
   </tbody>
 </table>
