@@ -49,7 +49,7 @@ For detailed installation instructions and configuration options, see [Installat
 ## Contributors
 
 <a href="https://github.com/py-daily/pywebguard/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" />
+  <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" width="800" />
 </a>
 
 ## License
