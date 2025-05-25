@@ -27,6 +27,7 @@ jobs:
         run: |
           python -m pip install --upgrade pip
           pip install -r requirements.txt
+          pip install pytest-cov pytest-html
 
       - name: Check Code Format
         uses: weibullguy/python-lint-plus@master
@@ -50,6 +51,41 @@ jobs:
       - name: Run Tests
         run: |
           pytest --verbose tests/
+      
+      - name: Pytest Coverage
+        id: coverage
+        run: |
+          pytest --cov=pywebguard --cov-report=term-missing --cov-report=html --cov-report=xml tests/
+          echo "Coverage report generated in htmlcov/"
+          COVERAGE=$(cat coverage.xml | grep -o 'line-rate="[0-9.]*"' | cut -d'"' -f2)
+          echo "coverage=$COVERAGE" >> $GITHUB_OUTPUT
+
+      - name: Upload Coverage Report
+        uses: actions/upload-artifact@v2
+        with:
+          name: coverage-report
+          path: htmlcov/
+
+      - name: Send Telegram Notification
+        if: always()
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          message: |
+            🚀 PyWebGuard Pipeline Status
+            
+            👤 Actor: ${{ github.actor }}
+            📦 Repository: ${{ github.repository }}
+            🔄 Branch: ${{ github.ref }}
+            📝 Commit: ${{ github.sha }}
+            💬 Message: ${{ github.event.head_commit.message }}
+            
+            📊 Test Coverage: ${{ steps.coverage.outputs.coverage }}%
+            
+            🔍 Coverage Report: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+            
+            Status: ${{ job.status }}
 
       - name: Automatic Tagging of Releases
         uses: rymndhng/release-on-push-action@master

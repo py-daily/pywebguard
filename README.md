@@ -1,4 +1,7 @@
 # PyWebGuard
+[![PyPI version](https://badge.fury.io/py/pywebguard.svg)](https://badge.fury.io/py/pywebguard)
+[![Python Versions](https://img.shields.io/pypi/pyversions/pywebguard.svg)](https://pypi.org/project/pywebguard/)
+[![License](https://img.shields.io/github/license/py-daily/pywebguard.svg)](https://github.com/py-daily/pywebguard/blob/main/LICENSE)
 
 A comprehensive security library for Python web applications, providing middleware for IP filtering, rate limiting, and other security features with both synchronous and asynchronous support.
 
