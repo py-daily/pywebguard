@@ -1,3 +1,30 @@
+<!-- START doctoc generated TOC please keep comment here to allow auto update -->
+<!-- DON'T EDIT THIS SECTION, INSTEAD RE-RUN doctoc TO UPDATE -->
+**Table of Contents**  *generated with [DocToc](https://github.com/ktechhub/doctoc)*
+
+<!---toc start-->
+
+* [PyWebGuard](#pywebguard)
+  * [Key Features](#key-features)
+  * [Quick Start](#quick-start)
+* [Define route-specific rate limits](#define-route-specific-rate-limits)
+* [Initialize storage (async in-memory for this example)](#initialize-storage-async-in-memory-for-this-example)
+* [Uncomment to use Redis storage instead or import any of the storage supports](#uncomment-to-use-redis-storage-instead-or-import-any-of-the-storage-supports)
+* [storage = AsyncRedisStorage(url="redis://localhost:6379")](#storage--asyncredisstorageurlredislocalhost6379)
+* [Add PyWebGuard middleware](#add-pywebguard-middleware)
+* [Example of a path that might trigger penetration detection](#example-of-a-path-that-might-trigger-penetration-detection)
+* [Helper endpoint to check remaining rate limits](#helper-endpoint-to-check-remaining-rate-limits)
+* [Endpoint to check if an IP is banned](#endpoint-to-check-if-an-ip-is-banned)
+* [Admin endpoint to get metrics](#admin-endpoint-to-get-metrics)
+* [Admin endpoint to ban an IP](#admin-endpoint-to-ban-an-ip)
+* [Admin endpoint to unban an IP](#admin-endpoint-to-unban-an-ip)
+  * [Documentation](#documentation)
+  * [Contributors](#contributors)
+  * [License](#license)
+
+<!---toc end-->
+
+<!-- END doctoc generated TOC please keep comment here to allow auto update -->
 # PyWebGuard
 [![PyPI version](https://badge.fury.io/py/pywebguard.svg)](https://badge.fury.io/py/pywebguard)
 [![Python Versions](https://img.shields.io/pypi/pyversions/pywebguard.svg)](https://pypi.org/project/pywebguard/)
