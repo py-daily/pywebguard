@@ -86,6 +86,16 @@ class SecurityLogger:
 
         return backends
 
+    def _sanitize_for_json(self, obj):
+        if isinstance(obj, dict):
+            return {k: self._sanitize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._sanitize_for_json(v) for v in obj]
+        elif isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        else:
+            return str(obj)
+
     def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
         Log a request.
@@ -111,7 +121,7 @@ class SecurityLogger:
         }
 
         # Log to console/file
-        self.logger.info(f"Request: {json.dumps(log_entry)}")
+        self.logger.info(f"Request: {json.dumps(self._sanitize_for_json(log_entry))}")
 
         # Log to backends
         for backend in self.backends:
@@ -146,7 +156,9 @@ class SecurityLogger:
         }
 
         # Log to console/file
-        self.logger.warning(f"Blocked request: {json.dumps(log_entry)}")
+        self.logger.warning(
+            f"Blocked request: {json.dumps(self._sanitize_for_json(log_entry))}"
+        )
 
         # Log to backends
         for backend in self.backends:
@@ -280,6 +292,16 @@ class AsyncSecurityLogger:
 
         return backends
 
+    def _sanitize_for_json(self, obj):
+        if isinstance(obj, dict):
+            return {k: self._sanitize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._sanitize_for_json(v) for v in obj]
+        elif isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        else:
+            return str(obj)
+
     async def log_request(self, request_info: Dict[str, Any], response: Any) -> None:
         """
         Log a request asynchronously.
@@ -305,7 +327,7 @@ class AsyncSecurityLogger:
         }
 
         # Log to console/file
-        self.logger.info(f"Request: {json.dumps(log_entry)}")
+        self.logger.info(f"Request: {json.dumps(self._sanitize_for_json(log_entry))}")
 
         # Log to backends
         for backend in self.backends:
@@ -340,7 +362,9 @@ class AsyncSecurityLogger:
         }
 
         # Log to console/file
-        self.logger.warning(f"Blocked request: {json.dumps(log_entry)}")
+        self.logger.warning(
+            f"Blocked request: {json.dumps(self._sanitize_for_json(log_entry))}"
+        )
 
         # Log to backends
         for backend in self.backends:

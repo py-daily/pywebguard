@@ -8,6 +8,7 @@ from pywebguard.core.config import (
     GuardConfig,
     IPFilterConfig,
     RateLimitConfig,
+    UserAgentConfig,
 )
 from pywebguard.core.base import Guard, AsyncGuard
 from pywebguard.storage.memory import MemoryStorage, AsyncMemoryStorage
@@ -84,6 +85,10 @@ def basic_config() -> GuardConfig:
             enabled=True,
             requests_per_minute=60,
             burst_size=10,
+        ),
+        user_agent=UserAgentConfig(
+            enabled=True,
+            allowed_agents=["Werkzeug/3.1.3"],
         ),
     )
 

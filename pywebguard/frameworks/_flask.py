@@ -69,6 +69,8 @@ class FlaskGuard:
         self.guard = Guard(
             config=config, storage=storage, route_rate_limits=route_rate_limits
         )
+        # Inject the Flask-specific request info extractor
+        self.guard._extract_request_info = self._extract_request_info
 
         if app is not None:
             self.init_app(app)
@@ -144,11 +146,37 @@ class FlaskGuard:
         if forwarded_for:
             client_host = forwarded_for.split(",")[0].strip()
 
-        return {
+        # Always use the string representation of request.user_agent
+        user_agent = str(request.user_agent)
+
+        # Build headers from environ to avoid UserAgent object
+        safe_headers = {}
+        for k, v in request.environ.items():
+            if k.startswith("HTTP_"):
+                header = k[5:].replace("_", "-").title()
+                safe_headers[header] = str(v)
+        # Add Content-Type and Content-Length if present
+        if "CONTENT_TYPE" in request.environ:
+            safe_headers["Content-Type"] = str(request.environ["CONTENT_TYPE"])
+        if "CONTENT_LENGTH" in request.environ:
+            safe_headers["Content-Length"] = str(request.environ["CONTENT_LENGTH"])
+
+        request_info = {
             "ip": client_host,
-            "user_agent": request.headers.get("User-Agent", ""),
+            "user_agent": str(user_agent),
             "method": request.method,
             "path": request.path,
             "query": request.args.to_dict(),
-            "headers": dict(request.headers),
+            "headers": safe_headers,
         }
+        return self._sanitize_for_json(request_info)
+
+    def _sanitize_for_json(self, obj):
+        if isinstance(obj, dict):
+            return {k: self._sanitize_for_json(v) for k, v in obj.items()}
+        elif isinstance(obj, list):
+            return [self._sanitize_for_json(v) for v in obj]
+        elif isinstance(obj, (str, int, float, bool)) or obj is None:
+            return obj
+        else:
+            return str(obj)
