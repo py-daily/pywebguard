@@ -83,6 +83,12 @@ class RateLimiter(BaseLimiter):
         Returns:
             True if the path matches the pattern, False otherwise
         """
+        # Handle trailing slashes consistently
+        if pattern.endswith("/") and not path.endswith("/"):
+            pattern = pattern[:-1]
+        elif not pattern.endswith("/") and path.endswith("/"):
+            path = path[:-1]
+
         # Simple wildcard matching implementation
         if pattern == "*":
             return True
@@ -118,52 +124,63 @@ class RateLimiter(BaseLimiter):
         """
         # Get the appropriate config for this route
         config = self.config
+        matched_pattern = None
         if path is not None:
-            config = self.get_config_for_route(path)
+            # Check for exact match first
+            if path in self.route_configs:
+                config = self.route_configs[path]
+                matched_pattern = path
+            else:
+                # Check for pattern matches
+                for pattern, route_config in self.route_configs.items():
+                    if self._match_route_pattern(pattern, path):
+                        config = route_config
+                        matched_pattern = pattern
+                        break
 
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
 
         current_time = int(time.time())
+        current_minute = current_time // 60  # Use minute-based window
 
-        # Use path in the rate limit key if provided
-        path_suffix = f":{path}" if path else ""
-        window_key = f"ratelimit:{identifier}{path_suffix}:{current_time}"
-        print(
-            f"[RateLimiter] identifier={identifier}, path={path}, window_key={window_key}"
-        )
+        # Use matched pattern in the rate limit key if found
+        path_suffix = f":{matched_pattern}" if matched_pattern else ""
+        window_key = f"ratelimit:{identifier}{path_suffix}:{current_minute}"
 
         # Get current count for this window
         count = self.storage.get(window_key) or 0
-        print(
-            f"[DEBUG] check_limit: identifier={identifier}, path={path}, count={count}"
-        )
         if count < config.requests_per_minute:
-            new_count = self.storage.increment(window_key, 1, 1)  # 1 second TTL
+            new_count = self.storage.increment(window_key, 1, 60)  # 60 second TTL
             remaining = max(0, config.requests_per_minute - new_count)
-            reset_time = current_time + 1
-            result = {"allowed": True, "remaining": remaining, "reset": reset_time}
-            print(
-                f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
-            )
+            reset_time = (current_minute + 1) * 60  # Next minute
+            result = {
+                "allowed": True,
+                "remaining": remaining,
+                "reset": reset_time,
+                "limit": config.requests_per_minute,
+                "reason": None,
+            }
             return result
         else:
             # Check if burst is enabled and available
             if config.burst_size > 0:
                 burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
                 burst_count = self.storage.get(burst_key) or 0
-                print(
-                    f"[DEBUG] Burst check: burst_count={burst_count}, burst_size={config.burst_size}"
-                )
                 if burst_count < config.burst_size:
                     self.storage.increment(burst_key, 1, 3600)
-                    reset_time = current_time + 1
-                    result = {"allowed": True, "remaining": 0, "reset": reset_time}
-                    print(f"[DEBUG] Allowed by burst: result={result}")
+                    reset_time = (current_minute + 1) * 60  # Next minute
+                    result = {
+                        "allowed": True,
+                        "remaining": 0,
+                        "reset": reset_time,
+                        "limit": config.requests_per_minute,
+                        "reason": "Using burst allowance",
+                    }
                     return result
 
             # Block the request if no burst available or burst not enabled
-            reset_time = current_time + 1
+            reset_time = (current_minute + 1) * 60
             if config.auto_ban_threshold > 0:
                 violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
                 violations = self.storage.increment(
@@ -183,9 +200,9 @@ class RateLimiter(BaseLimiter):
                 "allowed": False,
                 "remaining": 0,
                 "reset": reset_time,
+                "limit": config.requests_per_minute,
                 "reason": f"Rate limit exceeded for {path or 'global'}",
             }
-            print(f"[DEBUG] Blocked: result={result}")
             return result
 
 
@@ -262,6 +279,12 @@ class AsyncRateLimiter(AsyncBaseLimiter):
         Returns:
             True if the path matches the pattern, False otherwise
         """
+        # Handle trailing slashes consistently
+        if pattern.endswith("/") and not path.endswith("/"):
+            pattern = pattern[:-1]
+        elif not pattern.endswith("/") and path.endswith("/"):
+            path = path[:-1]
+
         # Simple wildcard matching implementation
         if pattern == "*":
             return True
@@ -297,8 +320,19 @@ class AsyncRateLimiter(AsyncBaseLimiter):
         """
         # Get the appropriate config for this route
         config = self.config
+        matched_pattern = None
         if path is not None:
-            config = self.get_config_for_route(path)
+            # Check for exact match first
+            if path in self.route_configs:
+                config = self.route_configs[path]
+                matched_pattern = path
+            else:
+                # Check for pattern matches
+                for pattern, route_config in self.route_configs.items():
+                    if self._match_route_pattern(pattern, path):
+                        config = route_config
+                        matched_pattern = pattern
+                        break
 
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
@@ -306,46 +340,58 @@ class AsyncRateLimiter(AsyncBaseLimiter):
         current_time = int(time.time())
         current_minute = current_time // 60  # Use minute-based window
 
-        # Use path in the rate limit key if provided
-        path_suffix = f":{path}" if path else ""
-        window_key = f"ratelimit:{identifier}{path_suffix}:{current_minute}"
-        print(
-            f"[AsyncRateLimiter] identifier={identifier}, path={path}, window_key={window_key}"
-        )
+        # Use a consistent window key format that includes the pattern for route-specific limits
+        if matched_pattern:
+            window_key = f"ratelimit:{identifier}:{matched_pattern}:{current_minute}"
+        else:
+            window_key = f"ratelimit:{identifier}:global:{current_minute}"
 
         # Get current count for this window
         count = await self.storage.get(window_key) or 0
-        print(
-            f"[DEBUG] async_check_limit: identifier={identifier}, path={path}, count={count}"
-        )
+
+        # Check if we're under the limit
         if count < config.requests_per_minute:
-            new_count = await self.storage.increment(window_key, 1, 60)  # 60 second TTL
+            # Increment the counter with a TTL that extends to the next minute
+            next_minute = (current_minute + 1) * 60
+            ttl = next_minute - current_time
+            new_count = await self.storage.increment(window_key, 1, ttl)
             remaining = max(0, config.requests_per_minute - new_count)
-            reset_time = (current_minute + 1) * 60  # Next minute
-            result = {"allowed": True, "remaining": remaining, "reset": reset_time}
-            print(
-                f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
-            )
+            reset_time = next_minute
+            result = {
+                "allowed": True,
+                "remaining": remaining,
+                "reset": reset_time,
+                "limit": config.requests_per_minute,
+                "reason": None,
+            }
             return result
         else:
             # Check if burst is enabled and available
             if config.burst_size > 0:
-                burst_key = f"ratelimit:burst:{identifier}{path_suffix}"
-                burst_count = await self.storage.get(burst_key) or 0
-                print(
-                    f"[DEBUG] Burst check: burst_count={burst_count}, burst_size={config.burst_size}"
+                burst_key = (
+                    f"ratelimit:burst:{identifier}:{matched_pattern or 'global'}"
                 )
+                burst_count = await self.storage.get(burst_key) or 0
                 if burst_count < config.burst_size:
-                    await self.storage.increment(burst_key, 1, 3600)
+                    await self.storage.increment(
+                        burst_key, 1, 3600
+                    )  # 1 hour TTL for burst
                     reset_time = (current_minute + 1) * 60  # Next minute
-                    result = {"allowed": True, "remaining": 0, "reset": reset_time}
-                    print(f"[DEBUG] Allowed by burst: result={result}")
+                    result = {
+                        "allowed": True,
+                        "remaining": 0,
+                        "reset": reset_time,
+                        "limit": config.requests_per_minute,
+                        "reason": "Using burst allowance",
+                    }
                     return result
 
             # Block the request if no burst available or burst not enabled
-            reset_time = (current_minute + 1) * 60  # Next minute
+            reset_time = (current_minute + 1) * 60
             if config.auto_ban_threshold > 0:
-                violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
+                violation_key = (
+                    f"ratelimit:violations:{identifier}:{matched_pattern or 'global'}"
+                )
                 violations = await self.storage.increment(
                     violation_key, 1, 86400
                 )  # 24 hour TTL
@@ -363,7 +409,7 @@ class AsyncRateLimiter(AsyncBaseLimiter):
                 "allowed": False,
                 "remaining": 0,
                 "reset": reset_time,
-                "reason": f"Rate limit exceeded for {path or 'global'}",
+                "limit": config.requests_per_minute,
+                "reason": f"Rate limit exceeded for {path or 'global'} try again in {reset_time - current_time} seconds",
             }
-            print(f"[DEBUG] Blocked: result={result}")
             return result

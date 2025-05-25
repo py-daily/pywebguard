@@ -176,3 +176,6 @@ cython_debug/
 .env.local
 .env.development.local
 .env.test.local
+:memory*
+.DS_Store
+pywebguard.json

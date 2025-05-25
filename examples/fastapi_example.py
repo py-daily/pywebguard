@@ -38,6 +38,33 @@ logging.basicConfig(
 )
 logger = logging.getLogger("pywebguard-example")
 
+
+# Custom response handler for blocked requests
+async def custom_response_handler(request: Request, reason: str) -> Response:
+    """
+    Custom handler for blocked requests.
+
+    Args:
+        request: The FastAPI request object
+        reason: The reason the request was blocked
+
+    Returns:
+        A custom JSON response with details about why the request was blocked
+    """
+    status_code = 429 if "rate limit" in reason.lower() else 403
+
+    return JSONResponse(
+        status_code=status_code,
+        content={
+            "error": "Request blocked",
+            "reason": reason,
+            "timestamp": time.time(),
+            "path": request.url.path,
+            "method": request.method,
+        },
+    )
+
+
 # Create FastAPI app
 app = FastAPI(
     title="PyWebGuard FastAPI Example",
@@ -64,7 +91,7 @@ config = GuardConfig(
     # User agent filtering
     user_agent={
         "enabled": True,
-        "blocked_agents": ["curl/7.*", "wget", "Scrapy", "bot", "Bot"],
+        "blocked_agents": ["curl", "wget", "Scrapy", "bot", "Bot"],
     },
     # CORS configuration
     cors={
@@ -119,83 +146,55 @@ route_rate_limits = [
 storage = AsyncMemoryStorage()
 
 # Uncomment to use Redis storage instead
-# storage = AsyncRedisStorage(
-#     host="localhost",
-#     port=6379,
-#     db=0,
-#     password=None,
-#     prefix="pywebguard:",
-# )
+# storage = AsyncRedisStorage(url="redis://localhost:6379")
 
-
-# Custom response handler for blocked requests
-async def custom_response_handler(request: Request, reason: str) -> Response:
-    """
-    Custom handler for blocked requests.
-
-    Args:
-        request: The FastAPI request object
-        reason: The reason the request was blocked
-
-    Returns:
-        A custom JSON response with details about why the request was blocked
-    """
-    status_code = 429 if "rate limit" in reason.lower() else 403
-
-    return JSONResponse(
-        status_code=status_code,
-        content={
-            "error": "Request blocked",
-            "reason": reason,
-            "timestamp": time.time(),
-            "path": request.url.path,
-            "method": request.method,
-        },
-    )
-
-
-# Add PyWebGuard middleware with route-specific rate limits
-guard_middleware = FastAPIGuard(
-    app,
+# Add PyWebGuard middleware
+app.add_middleware(
+    FastAPIGuard,
     config=config,
     storage=storage,
     route_rate_limits=route_rate_limits,
-    response_handler=custom_response_handler,
+    custom_response_handler=custom_response_handler,
 )
+
+# Print debug info about route configurations
+print("[DEBUG] Route rate limits configuration:")
+for route in route_rate_limits:
+    print(f"  {route['endpoint']}: {route['requests_per_minute']} req/min")
 
 
 # Basic routes
-@app.get("/")
+@app.get("/", tags=["main"])
 async def root():
     """Root endpoint with default rate limit (100 req/min)"""
     return {"message": "Hello World - Default rate limit (100 req/min)"}
 
 
-@app.get("/api/limited")
+@app.get("/api/limited", tags=["main"])
 async def limited_endpoint():
     """Strictly rate limited endpoint (5 req/min)"""
     return {"message": "This endpoint is strictly rate limited (5 req/min)"}
 
 
-@app.get("/api/uploads/files")
+@app.get("/api/uploads/files", tags=["main"])
 async def upload_files():
     """File upload endpoint with custom rate limit (10 req/min)"""
     return {"message": "File upload endpoint with custom rate limit (10 req/min)"}
 
 
-@app.get("/api/admin/dashboard")
+@app.get("/api/admin/dashboard", tags=["main"])
 async def admin_dashboard():
     """Admin dashboard with custom rate limit (20 req/min)"""
     return {"message": "Admin dashboard with custom rate limit (20 req/min)"}
 
 
-@app.get("/api/admin/users/list")
+@app.get("/api/admin/users/list", tags=["main"])
 async def admin_users():
     """Admin users list with custom rate limit (20 req/min)"""
     return {"message": "Admin users list with custom rate limit (20 req/min)"}
 
 
-@app.get("/protected")
+@app.get("/protected", tags=["main"])
 async def protected(request: Request):
     """Protected endpoint with default rate limit"""
     return {
@@ -205,8 +204,24 @@ async def protected(request: Request):
     }
 
 
+# Example of a path that might trigger penetration detection
+@app.get("/search", tags=["main"])
+async def search(q: str):
+    """
+    Search endpoint that might trigger penetration detection if malicious queries are used
+
+    Args:
+        q: Search query
+
+    Returns:
+        Search results
+    """
+    # PyWebGuard will check for SQL injection, XSS, etc. in the query parameter
+    return {"results": f"Search results for: {q}"}
+
+
 # Helper endpoint to check remaining rate limits
-@app.get("/rate-limit-status")
+@app.get("/rate-limit-status", tags=["helper"])
 async def rate_limit_status(request: Request, path: str = "/"):
     """
     Check rate limit status for a specific path
@@ -221,7 +236,8 @@ async def rate_limit_status(request: Request, path: str = "/"):
     client_ip = request.client.host
 
     # Get rate limit info for the specified path
-    rate_info = await guard_middleware.guard.rate_limiter.check_limit(client_ip, path)
+    guard = request.app.state.guard
+    rate_info = await guard.guard.rate_limiter.check_limit(client_ip, path)
 
     return {
         "path": path,
@@ -233,7 +249,7 @@ async def rate_limit_status(request: Request, path: str = "/"):
 
 
 # Endpoint to check if an IP is banned
-@app.get("/check-ban-status")
+@app.get("/check-ban-status", tags=["helper"])
 async def check_ban_status(request: Request, ip: Optional[str] = None):
     """
     Check if an IP is banned
@@ -246,7 +262,8 @@ async def check_ban_status(request: Request, ip: Optional[str] = None):
         Ban status information
     """
     check_ip = ip or request.client.host
-    is_banned = await guard_middleware.guard.is_ip_banned(check_ip)
+    guard = request.app.state.guard
+    is_banned = await guard.guard.is_ip_banned(check_ip)
 
     return {
         "ip": check_ip,
@@ -256,7 +273,7 @@ async def check_ban_status(request: Request, ip: Optional[str] = None):
 
 
 # Admin endpoint to get metrics
-@app.get("/admin/metrics")
+@app.get("/admin/metrics", tags=["admin"])
 async def get_metrics(request: Request):
     """
     Get PyWebGuard metrics
@@ -268,17 +285,32 @@ async def get_metrics(request: Request):
         Current metrics from PyWebGuard
     """
     # This would typically be protected by authentication
-    metrics = await guard_middleware.guard.get_metrics()
+    guard = request.app.state.guard
+    # Get rate limit info for all paths
+    rate_limits = {}
+    for path in ["/", "/api/limited", "/api/uploads/*", "/api/admin/**"]:
+        rate_info = await guard.guard.rate_limiter.check_limit(
+            request.client.host, path
+        )
+        rate_limits[path] = {
+            "allowed": rate_info["allowed"],
+            "remaining": rate_info["remaining"],
+            "reset": rate_info["reset"],
+        }
 
     return {
         "timestamp": time.time(),
-        "metrics": metrics,
+        "metrics": {
+            "rate_limits": rate_limits,
+            "client_ip": request.client.host,
+            "user_agent": request.headers.get("user-agent", "Unknown"),
+        },
     }
 
 
 # Admin endpoint to ban an IP
-@app.post("/admin/ban-ip")
-async def ban_ip(request: Request, ip: str, duration: int = 3600):
+@app.post("/admin/ban-ip", tags=["admin"])
+async def ban_ip(request: Request, ip: str, duration: int = 60):
     """
     Ban an IP address
 
@@ -291,7 +323,13 @@ async def ban_ip(request: Request, ip: str, duration: int = 3600):
         Ban confirmation
     """
     # This would typically be protected by authentication
-    await guard_middleware.guard.ban_ip(ip, duration)
+    guard = request.app.state.guard
+    ban_key = f"banned_ip:{ip}"
+    await guard.guard.storage.set(
+        ban_key,
+        {"reason": "Manually banned via API", "timestamp": time.time()},
+        duration,
+    )
 
     return {
         "message": f"IP {ip} banned for {duration} seconds",
@@ -300,7 +338,7 @@ async def ban_ip(request: Request, ip: str, duration: int = 3600):
 
 
 # Admin endpoint to unban an IP
-@app.post("/admin/unban-ip")
+@app.post("/admin/unban-ip", tags=["admin"])
 async def unban_ip(request: Request, ip: str):
     """
     Unban an IP address
@@ -313,28 +351,14 @@ async def unban_ip(request: Request, ip: str):
         Unban confirmation
     """
     # This would typically be protected by authentication
-    await guard_middleware.guard.unban_ip(ip)
+    guard = request.app.state.guard
+    ban_key = f"banned_ip:{ip}"
+    await guard.guard.storage.delete(ban_key)
 
     return {
         "message": f"IP {ip} unbanned",
         "timestamp": time.time(),
     }
-
-
-# Example of a path that might trigger penetration detection
-@app.get("/search")
-async def search(q: str):
-    """
-    Search endpoint that might trigger penetration detection if malicious queries are used
-
-    Args:
-        q: Search query
-
-    Returns:
-        Search results
-    """
-    # PyWebGuard will check for SQL injection, XSS, etc. in the query parameter
-    return {"results": f"Search results for: {q}"}
 
 
 if __name__ == "__main__":

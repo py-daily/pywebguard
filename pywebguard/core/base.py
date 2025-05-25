@@ -296,12 +296,18 @@ class Guard:
                 Each dict should have: endpoint, requests_per_minute, burst_size, auto_ban_threshold (optional)
         """
         for config in route_configs:
-            if "endpoint" not in config or "requests_per_minute" not in config:
-                self.logger.logger.warning(f"Skipping invalid route config: {config}")
+            # Make a deep copy of the config to prevent mutation
+            config_copy = {k: v for k, v in config.items()}
+            if (
+                "endpoint" not in config_copy
+                or "requests_per_minute" not in config_copy
+            ):
+                self.logger.logger.warning(
+                    f"Skipping invalid route config: {config_copy}"
+                )
                 continue
-
-            endpoint = config.pop("endpoint")
-            self.add_route_rate_limit(endpoint, config)
+            endpoint = config_copy.pop("endpoint")
+            self.add_route_rate_limit(endpoint, config_copy)
 
     def check_request(self, request: RequestProtocol) -> Dict[str, Any]:
         """
@@ -622,12 +628,18 @@ class AsyncGuard:
                 Each dict should have: endpoint, requests_per_minute, burst_size, auto_ban_threshold (optional)
         """
         for config in route_configs:
-            if "endpoint" not in config or "requests_per_minute" not in config:
-                self.logger.logger.warning(f"Skipping invalid route config: {config}")
+            # Make a deep copy of the config to prevent mutation
+            config_copy = {k: v for k, v in config.items()}
+            if (
+                "endpoint" not in config_copy
+                or "requests_per_minute" not in config_copy
+            ):
+                self.logger.logger.warning(
+                    f"Skipping invalid route config: {config_copy}"
+                )
                 continue
-
-            endpoint = config.pop("endpoint")
-            self.add_route_rate_limit(endpoint, config)
+            endpoint = config_copy.pop("endpoint")
+            self.add_route_rate_limit(endpoint, config_copy)
 
     async def check_request(self, request: RequestProtocol) -> Dict[str, Any]:
         """

@@ -10,7 +10,7 @@ Classes:
 """
 
 import time
-from typing import Any, Dict, Optional, Tuple, Union, List, cast
+from typing import Any, Dict, Optional
 
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
 
@@ -42,9 +42,10 @@ class MemoryStorage(BaseStorage):
         """
         now = time.time()
         expired = [k for k, ttl in self._ttls.items() if ttl <= now]
-        for k in expired:
-            del self._storage[k]
-            del self._ttls[k]
+        if expired:
+            for k in expired:
+                del self._storage[k]
+                del self._ttls[k]
 
     def get(self, key: str) -> Optional[Any]:
         """
@@ -57,7 +58,15 @@ class MemoryStorage(BaseStorage):
             The value if found and not expired, None otherwise
         """
         self._clean_expired()
-        return self._storage.get(key)
+        if key not in self._storage:
+            return None
+        if key in self._ttls and self._ttls[key] <= time.time():
+            del self._storage[key]
+            del self._ttls[key]
+            return None
+        value = self._storage[key]
+        ttl = self._ttls.get(key)
+        return value
 
     def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """
@@ -68,6 +77,7 @@ class MemoryStorage(BaseStorage):
             value: The value to store
             ttl: Time to live in seconds
         """
+        self._clean_expired()
         self._storage[key] = value
 
         if ttl is not None:
@@ -109,11 +119,11 @@ class MemoryStorage(BaseStorage):
         new_value = current + amount
         self._storage[key] = new_value
 
-        if ttl is not None and is_new:
+        if ttl is not None:
             self._ttls[key] = time.time() + ttl
-        elif key in self._ttls and (ttl is None or not is_new):
-            # Don't update TTL if not new
-            pass
+        elif is_new:
+            # If it's a new key and no TTL provided, use a default TTL
+            self._ttls[key] = time.time() + 60  # Default 60 second TTL
 
         return new_value
 
@@ -128,7 +138,13 @@ class MemoryStorage(BaseStorage):
             True if the key exists and is not expired, False otherwise
         """
         self._clean_expired()
-        return key in self._storage
+        if key not in self._storage:
+            return False
+        if key in self._ttls and self._ttls[key] <= time.time():
+            del self._storage[key]
+            del self._ttls[key]
+            return False
+        return True
 
     def clear(self) -> None:
         """
