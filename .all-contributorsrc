@@ -15,6 +15,15 @@
       "contributions": [
         "doc"
       ]
+    },
+    {
+      "login": "Kalkulus1",
+      "name": "Mumuni Mohammed",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43080869?v=4",
+      "profile": "https://www.ktechhub.com",
+      "contributions": [
+        "projectManagement"
+      ]
     }
   ],
   "contributorsPerLine": 7,
