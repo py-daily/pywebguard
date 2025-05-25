@@ -13,7 +13,7 @@ with io.open(path.join(here, "README.md"), encoding="utf-8") as f:
     long_description = "\n" + f.read()
 
 
-fastapi = ["fastapi>=0.115.12", "starlette>=0.14.0", "uvicorn>=0.34.2"]
+fastapi = ["fastapi>=0.115.12", "httpx>=0.28.1", "starlette>=0.14.0", "uvicorn>=0.34.2"]
 flask = ["flask>=3.1.1"]
 # Storage backends
 redis = ["redis>=6.1.0", "aioredis>=2.0.1"]

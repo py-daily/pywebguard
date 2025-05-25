@@ -2,3 +2,4 @@
 fastapi
 starlette
 uvicorn  # For running FastAPI examples
+httpx
