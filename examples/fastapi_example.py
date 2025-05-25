@@ -17,26 +17,39 @@ To run this example:
     python fastapi_example.py
 """
 
+import logging
+import sys, os
+from dotenv import load_dotenv
+
+load_dotenv()
+
+# Configure root logger first
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+    force=True,  # Force reconfiguration of root logger
+)
+
+# Now import other modules
 from fastapi import FastAPI, Request, Response, Depends, HTTPException
 from fastapi.responses import JSONResponse
 from fastapi.middleware.cors import CORSMiddleware
 import uvicorn
 import time
-import logging
 from typing import Dict, List, Optional, Union, Any, Callable
 
 # Import PyWebGuard components
 from pywebguard import FastAPIGuard, GuardConfig, RateLimitConfig
 from pywebguard.storage.memory import AsyncMemoryStorage
+from pywebguard.core.config import LoggingConfig
 
 # Uncomment to use Redis storage instead
 # from pywebguard.storage.redis import AsyncRedisStorage
 
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
-)
+# Get logger for this module
 logger = logging.getLogger("pywebguard-example")
+logger.setLevel(logging.DEBUG)
 
 
 # Custom response handler for blocked requests
@@ -113,8 +126,15 @@ config = GuardConfig(
     # Logging configuration
     logging={
         "enabled": True,
-        "level": "INFO",
+        "level": "DEBUG",  # Change to DEBUG to see all messages
         "log_blocked_requests": True,
+        "stream": True,
+        "stream_levels": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        "meilisearch": {
+            "url": "https://meilisearch.dev.ktechhub.com",
+            "api_key": os.getenv("MEILISEARCH_API_KEY"),
+            "index_name": "pywebguard",
+        },
     },
 )
 
@@ -154,7 +174,7 @@ app.add_middleware(
     config=config,
     storage=storage,
     route_rate_limits=route_rate_limits,
-    custom_response_handler=custom_response_handler,
+    # custom_response_handler=custom_response_handler,
 )
 
 # Print debug info about route configurations

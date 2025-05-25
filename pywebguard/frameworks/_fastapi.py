@@ -139,18 +139,53 @@ class FastAPIGuard(BaseHTTPMiddleware):
         is_banned = await self.guard.is_ip_banned(client_ip)
         if is_banned:
             ban_info = await self.guard.storage.get(f"banned_ip:{client_ip}")
-            return await self.custom_response_handler(
+            response = await self.custom_response_handler(
                 request,
                 f"IP is banned: {ban_info.get('reason', 'Unknown reason')}",
             )
+            # Log blocked request
+            request_info = {
+                "ip": client_ip,
+                "method": request.method,
+                "path": request.url.path,
+                "user_agent": request.headers.get("user-agent", "unknown"),
+            }
+            await self.guard.logger.log_blocked_request(
+                request_info,
+                "ip_ban",
+                f"IP is banned: {ban_info.get('reason', 'Unknown reason')}",
+            )
+            return response
 
         # Check rate limits
         rate_info = await self.guard.rate_limiter.check_limit(
             client_ip, request.url.path
         )
         if not rate_info["allowed"]:
-            return await self.custom_response_handler(request, rate_info["reason"])
+            response = await self.custom_response_handler(request, rate_info["reason"])
+            # Log blocked request
+            request_info = {
+                "ip": client_ip,
+                "method": request.method,
+                "path": request.url.path,
+                "user_agent": request.headers.get("user-agent", "unknown"),
+            }
+            await self.guard.logger.log_security_event(
+                "WARNING",
+                f"Blocked request: {request.method} {request.url.path} - {rate_info['reason']}",
+            )
+            return response
 
         # Continue with the request
         response = await call_next(request)
+
+        # Log successful request
+        request_info = {
+            "ip": client_ip,
+            "method": request.method,
+            "path": request.url.path,
+            "user_agent": request.headers.get("user-agent", "unknown"),
+        }
+        await self.guard.logger.log_request(request_info, response)
+
         return response

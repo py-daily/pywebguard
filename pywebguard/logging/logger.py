@@ -7,7 +7,8 @@ import json
 import time
 from typing import Dict, Any, Optional, List, Union
 from pywebguard.core.config import LoggingConfig
-from .backends import MeilisearchBackend, ElasticsearchBackend, MongoDBBackend
+from .base import LoggingBackend, AsyncLoggingBackend
+from .backends import MeilisearchBackend, AsyncMeilisearchBackend
 
 
 class SecurityLogger:
@@ -24,7 +25,7 @@ class SecurityLogger:
         """
         self.config = config
         self.logger = self._setup_logger()
-        self.backends = self._setup_backends()
+        self.backends: List[LoggingBackend] = self._setup_backends()
 
     def _setup_logger(self) -> logging.Logger:
         """
@@ -34,6 +35,9 @@ class SecurityLogger:
             Configured logger
         """
         logger = logging.getLogger("pywebguard")
+
+        # Ensure logs propagate to root logger
+        logger.propagate = True
 
         # Set log level
         log_level = getattr(logging, self.config.log_level.upper(), logging.INFO)
@@ -63,7 +67,7 @@ class SecurityLogger:
 
         return logger
 
-    def _setup_backends(self) -> List[Any]:
+    def _setup_backends(self) -> List[LoggingBackend]:
         """
         Set up logging backends based on configuration.
 
@@ -75,14 +79,6 @@ class SecurityLogger:
         # Add Meilisearch backend if configured
         if hasattr(self.config, "meilisearch") and self.config.meilisearch:
             backends.append(MeilisearchBackend(self.config.meilisearch))
-
-        # Add Elasticsearch backend if configured
-        if hasattr(self.config, "elasticsearch") and self.config.elasticsearch:
-            backends.append(ElasticsearchBackend(self.config.elasticsearch))
-
-        # Add MongoDB backend if configured
-        if hasattr(self.config, "mongodb") and self.config.mongodb:
-            backends.append(MongoDBBackend(self.config.mongodb))
 
         return backends
 
@@ -159,7 +155,6 @@ class SecurityLogger:
         self.logger.warning(
             f"Blocked request: {json.dumps(self._sanitize_for_json(log_entry))}"
         )
-
         # Log to backends
         for backend in self.backends:
             try:
@@ -184,7 +179,6 @@ class SecurityLogger:
         # Log to console/file
         log_method = getattr(self.logger, level.lower(), self.logger.info)
         log_method(message, extra=extra)
-
         # Log to backends
         for backend in self.backends:
             try:
@@ -230,7 +224,7 @@ class AsyncSecurityLogger:
         """
         self.config = config
         self.logger = self._setup_logger()
-        self.backends = self._setup_backends()
+        self.backends: List[AsyncLoggingBackend] = self._setup_backends()
 
     def _setup_logger(self) -> logging.Logger:
         """
@@ -240,6 +234,9 @@ class AsyncSecurityLogger:
             Configured logger
         """
         logger = logging.getLogger("pywebguard")
+
+        # Ensure logs propagate to root logger
+        logger.propagate = True
 
         # Set log level
         log_level = getattr(logging, self.config.log_level.upper(), logging.INFO)
@@ -269,7 +266,7 @@ class AsyncSecurityLogger:
 
         return logger
 
-    def _setup_backends(self) -> List[Any]:
+    def _setup_backends(self) -> List[AsyncLoggingBackend]:
         """
         Set up logging backends based on configuration.
 
@@ -280,15 +277,7 @@ class AsyncSecurityLogger:
 
         # Add Meilisearch backend if configured
         if hasattr(self.config, "meilisearch") and self.config.meilisearch:
-            backends.append(MeilisearchBackend(self.config.meilisearch))
-
-        # Add Elasticsearch backend if configured
-        if hasattr(self.config, "elasticsearch") and self.config.elasticsearch:
-            backends.append(ElasticsearchBackend(self.config.elasticsearch))
-
-        # Add MongoDB backend if configured
-        if hasattr(self.config, "mongodb") and self.config.mongodb:
-            backends.append(MongoDBBackend(self.config.mongodb))
+            backends.append(AsyncMeilisearchBackend(self.config.meilisearch))
 
         return backends
 
@@ -328,7 +317,6 @@ class AsyncSecurityLogger:
 
         # Log to console/file
         self.logger.info(f"Request: {json.dumps(self._sanitize_for_json(log_entry))}")
-
         # Log to backends
         for backend in self.backends:
             try:
@@ -365,7 +353,6 @@ class AsyncSecurityLogger:
         self.logger.warning(
             f"Blocked request: {json.dumps(self._sanitize_for_json(log_entry))}"
         )
-
         # Log to backends
         for backend in self.backends:
             try:
@@ -390,7 +377,6 @@ class AsyncSecurityLogger:
         # Log to console/file
         log_method = getattr(self.logger, level.lower(), self.logger.info)
         log_method(message, extra=extra)
-
         # Log to backends
         for backend in self.backends:
             try:
