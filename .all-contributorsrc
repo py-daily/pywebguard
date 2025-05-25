@@ -1,24 +1,26 @@
 {
-  "projectName": "pywebguard",
-  "projectOwner": "py-daily",
-  "repoType": "github",
-  "repoHost": "https://github.com",
-  "files": ["README.md"],
+  "files": [
+    "README.md"
+  ],
   "imageSize": 100,
   "commit": false,
-  "contributorsPerLine": 7,
-  "contributorsSortAlphabetically": false,
-  "badgeTemplate": "[![All Contributors](https://img.shields.io/github/all-contributors/<%= py-daily %>/<%= pywebguard %>?color=ee8449&style=flat-square)](#contributors)",
-  "contributorTemplate": "<a href=\"<%= contributor.profile %>\"><img src=\"<%= contributor.avatar_url %>\" width=\"<%= options.imageSize %>px;\" alt=\"\"/><br /><sub><b><%= contributor.name %></b></sub></a>",
-  "wrapperTemplate": "\n<table>\n  <tbody><%= bodyContent %>  </tbody>\n<%= tableFooterContent %></table>\n\n",
-  "types": {
-    "custom": {
-      "symbol": "🔭",
-      "description": "A custom contribution type.",
-      "link": "[<%= symbol %>](<%= url %> \"<%= description %>\"),"
+  "commitType": "docs",
+  "commitConvention": "angular",
+  "contributors": [
+    {
+      "login": "hussein6065",
+      "name": "Hussein Baba Fuseini",
+      "avatar_url": "https://avatars.githubusercontent.com/u/43960479?v=4",
+      "profile": "https://github.com/hussein6065",
+      "contributions": [
+        "doc"
+      ]
     }
-  },
-  "linkToUsage": true,
+  ],
+  "contributorsPerLine": 7,
   "skipCi": true,
-  "contributors": []
+  "repoType": "github",
+  "repoHost": "https://github.com",
+  "projectName": "pywebguard",
+  "projectOwner": "py-daily"
 }
