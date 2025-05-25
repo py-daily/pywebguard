@@ -77,7 +77,6 @@ jobs:
           token: ${{ secrets.TELEGRAM_TOKEN }}
           format: markdown
           message: |
-            ```
             🚀 *PyWebGuard Pipeline Status*
 
             👤 *Actor:* `${{ github.actor }}`
@@ -91,7 +90,6 @@ jobs:
             🔍 *Coverage Report:* [View Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
 
             *Status:* `${{ job.status }}`
-            ```
 
       - name: Automatic Tagging of Releases
         uses: rymndhng/release-on-push-action@master
