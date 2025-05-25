@@ -337,7 +337,7 @@ if __name__ == "__main__":
 ## Contributors
 
 <a href="https://github.com/py-daily/pywebguard/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" width="800" />
+  <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" width="80" />
 </a>
 
 ## License

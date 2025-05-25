@@ -1,7 +1,16 @@
+import io
+from os import path, getenv
 from setuptools import setup, find_packages
 
-with open("README.md", "r", encoding="utf-8") as fh:
-    long_description = fh.read()
+
+VERSION = getenv("VERSION", "1.0.0")  # package version
+if "v" in VERSION:
+    VERSION = VERSION[1:]
+
+here = path.abspath(path.dirname(__file__))
+# Get the long description from the README file
+with io.open(path.join(here, "README.md"), encoding="utf-8") as f:
+    long_description = "\n" + f.read()
 
 
 fastapi = ["fastapi>=0.115.12", "starlette>=0.14.0", "uvicorn>=0.34.2"]
@@ -19,27 +28,29 @@ all_storage = redis + sqlite + tinydb + mongodb + postgresql + elasticsearch
 
 setup(
     name="pywebguard",
-    version="0.1.0",
+    version=VERSION,
     author="py-daily",
-    author_email="pydaily32@gmail.com",
+    author_email="mm@ktechhub.com",
     description="A comprehensive security library for Python web applications",
     long_description=long_description,
     long_description_content_type="text/markdown",
     url="https://github.com/py-daily/pywebguard",
-    packages=find_packages(),
+    packages=find_packages(
+        exclude=["tests", "docs", ".github", "examples", "requirements"]
+    ),
     classifiers=[
         "Development Status :: 3 - Alpha",
         "Intended Audience :: Developers",
         "License :: OSI Approved :: MIT License",
         "Operating System :: OS Independent",
-        "Programming Language :: Python :: 3",
-        "Programming Language :: Python :: 3.8",
-        "Programming Language :: Python :: 3.9",
-        "Programming Language :: Python :: 3.10",
-        "Programming Language :: Python :: 3.11",
-        "Programming Language :: Python :: 3.12",
-        "Programming Language :: Python :: 3.13",
         "Programming Language :: Python :: 3.14",
+        "Programming Language :: Python :: 3.13",
+        "Programming Language :: Python :: 3.12",
+        "Programming Language :: Python :: 3.11",
+        "Programming Language :: Python :: 3.10",
+        "Programming Language :: Python :: 3.9",
+        "Programming Language :: Python :: 3.8",
+        "Programming Language :: Python :: 3",
         "Topic :: Security",
         "Topic :: Internet :: WWW/HTTP",
         "Topic :: Software Development :: Libraries :: Python Modules",
