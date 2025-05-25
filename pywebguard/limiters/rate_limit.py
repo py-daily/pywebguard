@@ -128,17 +128,20 @@ class RateLimiter(BaseLimiter):
 
         # Use path in the rate limit key if provided
         path_suffix = f":{path}" if path else ""
-        window_key = f"ratelimit:{identifier}{path_suffix}:{current_time // 60}"
+        window_key = f"ratelimit:{identifier}{path_suffix}:{current_time}"
+        print(
+            f"[RateLimiter] identifier={identifier}, path={path}, window_key={window_key}"
+        )
 
-        # Get current count for this minute
+        # Get current count for this window
         count = self.storage.get(window_key) or 0
         print(
             f"[DEBUG] check_limit: identifier={identifier}, path={path}, count={count}"
         )
         if count < config.requests_per_minute:
-            new_count = self.storage.increment(window_key, 1, 60)
+            new_count = self.storage.increment(window_key, 1, 1)  # 1 second TTL
             remaining = max(0, config.requests_per_minute - new_count)
-            reset_time = (current_time // 60 + 1) * 60
+            reset_time = current_time + 1
             result = {"allowed": True, "remaining": remaining, "reset": reset_time}
             print(
                 f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
@@ -154,13 +157,13 @@ class RateLimiter(BaseLimiter):
                 )
                 if burst_count < config.burst_size:
                     self.storage.increment(burst_key, 1, 3600)
-                    reset_time = (current_time // 60 + 1) * 60
+                    reset_time = current_time + 1
                     result = {"allowed": True, "remaining": 0, "reset": reset_time}
                     print(f"[DEBUG] Allowed by burst: result={result}")
                     return result
 
             # Block the request if no burst available or burst not enabled
-            reset_time = (current_time // 60 + 1) * 60
+            reset_time = current_time + 1
             if config.auto_ban_threshold > 0:
                 violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
                 violations = self.storage.increment(
@@ -301,20 +304,24 @@ class AsyncRateLimiter(AsyncBaseLimiter):
             return {"allowed": True, "remaining": -1, "reset": -1}
 
         current_time = int(time.time())
+        current_minute = current_time // 60  # Use minute-based window
 
         # Use path in the rate limit key if provided
         path_suffix = f":{path}" if path else ""
-        window_key = f"ratelimit:{identifier}{path_suffix}:{current_time // 60}"
+        window_key = f"ratelimit:{identifier}{path_suffix}:{current_minute}"
+        print(
+            f"[AsyncRateLimiter] identifier={identifier}, path={path}, window_key={window_key}"
+        )
 
-        # Get current count for this minute
+        # Get current count for this window
         count = await self.storage.get(window_key) or 0
         print(
             f"[DEBUG] async_check_limit: identifier={identifier}, path={path}, count={count}"
         )
         if count < config.requests_per_minute:
-            new_count = await self.storage.increment(window_key, 1, 60)
+            new_count = await self.storage.increment(window_key, 1, 60)  # 60 second TTL
             remaining = max(0, config.requests_per_minute - new_count)
-            reset_time = (current_time // 60 + 1) * 60
+            reset_time = (current_minute + 1) * 60  # Next minute
             result = {"allowed": True, "remaining": remaining, "reset": reset_time}
             print(
                 f"[DEBUG] Allowed by main limit: new_count={new_count}, result={result}"
@@ -330,13 +337,13 @@ class AsyncRateLimiter(AsyncBaseLimiter):
                 )
                 if burst_count < config.burst_size:
                     await self.storage.increment(burst_key, 1, 3600)
-                    reset_time = (current_time // 60 + 1) * 60
+                    reset_time = (current_minute + 1) * 60  # Next minute
                     result = {"allowed": True, "remaining": 0, "reset": reset_time}
                     print(f"[DEBUG] Allowed by burst: result={result}")
                     return result
 
             # Block the request if no burst available or burst not enabled
-            reset_time = (current_time // 60 + 1) * 60
+            reset_time = (current_minute + 1) * 60  # Next minute
             if config.auto_ban_threshold > 0:
                 violation_key = f"ratelimit:violations:{identifier}{path_suffix}"
                 violations = await self.storage.increment(

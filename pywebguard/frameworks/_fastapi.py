@@ -9,6 +9,8 @@ Classes:
 """
 
 from typing import Callable, Dict, Any, Optional, List, Union, cast
+import asyncio
+from concurrent.futures import ThreadPoolExecutor
 
 # Check if FastAPI is installed
 try:
@@ -35,18 +37,15 @@ except ImportError:
         pass
 
 
-from pywebguard.core.base import AsyncGuard
+from pywebguard.core.base import Guard, AsyncGuard
 from pywebguard.core.config import GuardConfig
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
-from pywebguard.storage.memory import AsyncMemoryStorage
+from pywebguard.storage.memory import MemoryStorage, AsyncMemoryStorage
 
 
 class FastAPIGuard(BaseHTTPMiddleware):
     """
-    FastAPI middleware for PyWebGuard.
-
-    This middleware intercepts requests to FastAPI applications and applies
-    security checks before allowing the request to proceed.
+    FastAPI middleware for PyWebGuard supporting both sync and async guards.
     """
 
     def __init__(
@@ -76,47 +75,48 @@ class FastAPIGuard(BaseHTTPMiddleware):
             )
 
         super().__init__(app)
-        self.guard = AsyncGuard(
-            config=config,
-            storage=storage or AsyncMemoryStorage(),
-            route_rate_limits=route_rate_limits,
+        self._executor = ThreadPoolExecutor()
+        self.config = config
+        self.storage = storage
+        self.route_rate_limits = route_rate_limits
+        print(
+            f"[FastAPIGuard] Initialized with config={config}, storage={storage}, route_rate_limits={route_rate_limits}"
         )
 
-    async def dispatch(self, request: Request, call_next: Callable) -> Response:
-        """
-        Process the request through security checks.
+        self._guard_initialized = False
+        self._guard_init_args = (config, storage, route_rate_limits)
+        # Do not initialize guard here if storage is an async generator
+        if not (hasattr(storage, "__anext__") and hasattr(storage, "__aiter__")):
+            self._initialize_guard(config, storage, route_rate_limits)
 
-        Args:
-            request: FastAPI request
-            call_next: Function to call the next middleware
-
-        Returns:
-            Response object
-        """
-        # Check if request should be allowed
-        result = await self.guard.check_request(request)
-
-        if not result["allowed"]:
-            # Return error response if request is blocked
-            return JSONResponse(
-                status_code=403,
-                content={
-                    "detail": "Request blocked by security policy",
-                    "reason": result["details"],
-                },
+    def _initialize_guard(self, config, storage, route_rate_limits):
+        if storage is None:
+            self.guard = AsyncGuard(
+                config=config,
+                storage=AsyncMemoryStorage(),
+                route_rate_limits=route_rate_limits,
             )
+        elif isinstance(storage, AsyncBaseStorage):
+            self.guard = AsyncGuard(
+                config=config,
+                storage=storage,
+                route_rate_limits=route_rate_limits,
+            )
+        elif isinstance(storage, BaseStorage):
+            self.guard = Guard(
+                config=config,
+                storage=storage,
+                route_rate_limits=route_rate_limits,
+            )
+        self._guard_initialized = True
+        print(f"[FastAPIGuard] Created guard: {self.guard}")
 
-        # Process the request
-        response = await call_next(request)
+    @property
+    def _is_async(self):
+        guard = getattr(self, "_guard", None)
+        from pywebguard.core.base import AsyncGuard
 
-        # Update metrics based on request and response
-        await self.guard.update_metrics(request, response)
-
-        # Add CORS headers if needed
-        if self.guard.cors_handler.config.enabled:
-            await self.guard.cors_handler.add_cors_headers(request, response)
-
-        return response
+        return isinstance(guard, AsyncGuard)
 
     def _extract_request_info(self, request: Request) -> Dict[str, Any]:
         """
@@ -143,3 +143,62 @@ class FastAPIGuard(BaseHTTPMiddleware):
             "query": dict(request.query_params),
             "headers": dict(request.headers),
         }
+
+    async def dispatch(self, request: Request, call_next: Callable) -> Response:
+        if not self._guard_initialized:
+            config, storage, route_rate_limits = self._guard_init_args
+            if hasattr(storage, "__anext__") and hasattr(storage, "__aiter__"):
+                storage_instance = await storage.__anext__()
+                storage = storage_instance
+            self._initialize_guard(config, storage, route_rate_limits)
+        print(f"[FastAPIGuard] dispatch called: {request.method} {request.url.path}")
+        try:
+            # Get client IP
+            client_ip = request.headers.get("X-Forwarded-For", request.client.host)
+            print(f"[FastAPIGuard] Client IP: {client_ip}")
+
+            # Check if IP is banned (only for guards that implement it)
+            banned = False
+            if hasattr(self.guard, "is_ip_banned"):
+                is_ip_banned_fn = getattr(self.guard, "is_ip_banned")
+                if asyncio.iscoroutinefunction(is_ip_banned_fn):
+                    banned = await is_ip_banned_fn(client_ip)
+                else:
+                    banned = is_ip_banned_fn(client_ip)
+            if banned:
+                print(f"[FastAPIGuard] IP {client_ip} is banned")
+                return JSONResponse(
+                    status_code=403,
+                    content={"detail": "IP address is banned"},
+                )
+
+            # Check rate limits
+            if self.guard.config.rate_limit.enabled:
+                print(f"[FastAPIGuard] Checking rate limits for {request.url.path}")
+                if isinstance(self.guard, AsyncGuard):
+                    result = await self.guard.check_rate_limit(
+                        client_ip,
+                        request.url.path,
+                    )
+                else:
+                    # Run sync guard in thread pool
+                    result = await asyncio.get_event_loop().run_in_executor(
+                        self._executor,
+                        self.guard.check_rate_limit,
+                        client_ip,
+                        request.url.path,
+                    )
+                if not result["allowed"]:
+                    print(f"[FastAPIGuard] Rate limit exceeded: {result}")
+                    return JSONResponse(
+                        status_code=403,
+                        content={"detail": result["reason"]},
+                    )
+
+            # Process request
+            response = await call_next(request)
+            return response
+
+        except Exception as e:
+            print(f"[FastAPIGuard] Error in dispatch: {e}")
+            raise

@@ -23,21 +23,30 @@ class SQLiteStorage(BaseStorage):
     SQLite3 storage backend (synchronous).
     """
 
-    def __init__(self, db_path: str = ":memory:", table_name: str = "pywebguard"):
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        table_name: str = "pywebguard",
+        check_same_thread: bool = True,
+    ):
         """
         Initialize the SQLite storage.
 
         Args:
             db_path: Path to SQLite database file (use :memory: for in-memory database)
             table_name: Name of the table to store values
+            check_same_thread: If True, only the creating thread may use the connection
         """
         self.db_path = db_path
         self.table_name = table_name
+        self.check_same_thread = check_same_thread
         self._init_db()
 
     def _init_db(self) -> None:
         """Initialize the database and create the table if it doesn't exist."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             conn.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
@@ -51,7 +60,9 @@ class SQLiteStorage(BaseStorage):
 
     def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             conn.execute(
                 f"DELETE FROM {self.table_name} WHERE expiry <= ?", (time.time(),)
             )
@@ -69,7 +80,9 @@ class SQLiteStorage(BaseStorage):
         """
         self._clean_expired()
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             cursor = conn.execute(
                 f"SELECT value FROM {self.table_name} WHERE key = ?", (key,)
             )
@@ -98,7 +111,9 @@ class SQLiteStorage(BaseStorage):
 
         expiry = time.time() + ttl if ttl is not None else None
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             conn.execute(
                 f"""
                 INSERT OR REPLACE INTO {self.table_name} (key, value, expiry)
@@ -115,7 +130,9 @@ class SQLiteStorage(BaseStorage):
         Args:
             key: The key to delete
         """
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             conn.execute(f"DELETE FROM {self.table_name} WHERE key = ?", (key,))
             conn.commit()
 
@@ -150,7 +167,9 @@ class SQLiteStorage(BaseStorage):
         """
         self._clean_expired()
 
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             cursor = conn.execute(
                 f"SELECT 1 FROM {self.table_name} WHERE key = ?", (key,)
             )
@@ -158,7 +177,9 @@ class SQLiteStorage(BaseStorage):
 
     def clear(self) -> None:
         """Clear all values from storage."""
-        with sqlite3.connect(self.db_path) as conn:
+        with sqlite3.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as conn:
             conn.execute(f"DELETE FROM {self.table_name}")
             conn.commit()
 
@@ -168,13 +189,19 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
     SQLite3 storage backend (asynchronous).
     """
 
-    def __init__(self, db_path: str = ":memory:", table_name: str = "pywebguard"):
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        table_name: str = "pywebguard",
+        check_same_thread: bool = True,
+    ):
         """
         Initialize the async SQLite storage.
 
         Args:
             db_path: Path to SQLite database file (use :memory: for in-memory database)
             table_name: Name of the table to store values
+            check_same_thread: If True, only the creating thread may use the connection
         """
         if not AIOSQLITE_AVAILABLE:
             raise ImportError(
@@ -184,6 +211,7 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
 
         self.db_path = db_path
         self.table_name = table_name
+        self.check_same_thread = check_same_thread
         self._initialized = False
 
     async def _ensure_initialized(self) -> None:
@@ -194,7 +222,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
 
     async def _init_db(self) -> None:
         """Initialize the database and create the table if it doesn't exist."""
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             await db.execute(
                 f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
@@ -209,7 +239,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
     async def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
         await self._ensure_initialized()
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             await db.execute(
                 f"DELETE FROM {self.table_name} WHERE expiry <= ?", (time.time(),)
             )
@@ -228,7 +260,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         await self._ensure_initialized()
         await self._clean_expired()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             async with db.execute(
                 f"SELECT value FROM {self.table_name} WHERE key = ?", (key,)
             ) as cursor:
@@ -259,7 +293,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
 
         expiry = time.time() + ttl if ttl is not None else None
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             await db.execute(
                 f"""
                 INSERT OR REPLACE INTO {self.table_name} (key, value, expiry)
@@ -278,7 +314,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         """
         await self._ensure_initialized()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             await db.execute(f"DELETE FROM {self.table_name} WHERE key = ?", (key,))
             await db.commit()
 
@@ -316,7 +354,9 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         await self._ensure_initialized()
         await self._clean_expired()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             async with db.execute(
                 f"SELECT 1 FROM {self.table_name} WHERE key = ?", (key,)
             ) as cursor:
@@ -327,6 +367,8 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         """Clear all values from storage."""
         await self._ensure_initialized()
 
-        async with aiosqlite.connect(self.db_path) as db:
+        async with aiosqlite.connect(
+            self.db_path, check_same_thread=self.check_same_thread
+        ) as db:
             await db.execute(f"DELETE FROM {self.table_name}")
             await db.commit()

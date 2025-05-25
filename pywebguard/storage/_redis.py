@@ -129,19 +129,25 @@ class RedisStorage(BaseStorage):
         prefixed_key = self._get_key(key)
         self.redis.delete(prefixed_key)
 
-    def increment(self, key: str, amount: int = 1) -> int:
+    def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
         """
         Increment a counter in storage.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
         """
         prefixed_key = self._get_key(key)
-        return self.redis.incrby(prefixed_key, amount)
+        pipe = self.redis.pipeline()
+        pipe.incrby(prefixed_key, amount)
+        if ttl is not None:
+            pipe.expire(prefixed_key, ttl)
+        result = pipe.execute()
+        return result[0]
 
     def exists(self, key: str) -> bool:
         """
@@ -262,19 +268,27 @@ class AsyncRedisStorage(AsyncBaseStorage):
         prefixed_key = self._get_key(key)
         await self.redis.delete(prefixed_key)
 
-    async def increment(self, key: str, amount: int = 1) -> int:
+    async def increment(
+        self, key: str, amount: int = 1, ttl: Optional[int] = None
+    ) -> int:
         """
         Increment a counter in storage asynchronously.
 
         Args:
             key: The key to increment
             amount: The amount to increment by
+            ttl: Time to live in seconds
 
         Returns:
             The new value
         """
         prefixed_key = self._get_key(key)
-        return await self.redis.incrby(prefixed_key, amount)
+        pipe = self.redis.pipeline()
+        pipe.incrby(prefixed_key, amount)
+        if ttl is not None:
+            pipe.expire(prefixed_key, ttl)
+        result = await pipe.execute()
+        return result[0]
 
     async def exists(self, key: str) -> bool:
         """

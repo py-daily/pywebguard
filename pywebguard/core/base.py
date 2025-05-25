@@ -400,7 +400,9 @@ class Guard:
         # Log the request
         self.logger.log_request(request_info, response)
 
-    def _extract_request_info(self, request: RequestProtocol) -> Dict[str, Any]:
+    def _extract_request_info(
+        self, request: Union[RequestProtocol, Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Extract information from a request object.
 
@@ -408,7 +410,7 @@ class Guard:
         to properly extract request information from the framework's request object.
 
         Args:
-            request: The framework-specific request object
+            request: The framework-specific request object or a dictionary with request info
 
         Returns:
             Dict with request information:
@@ -421,22 +423,35 @@ class Guard:
                 "headers": Dict[str, str]
             }
         """
+        if isinstance(request, dict):
+            return request
+
         # Parse query string into a dictionary
         query_dict = {}
-        if request.query_string:
-            for param in request.query_string.split("&"):
-                if "=" in param:
-                    key, value = param.split("=", 1)
-                    query_dict[key] = value
+        if hasattr(request, "query_string") and request.query_string:
+            query_dict = dict(
+                pair.split("=")
+                for pair in request.query_string.split("&")
+                if "=" in pair
+            )
 
         return {
-            "ip": request.remote_addr,
-            "user_agent": request.user_agent,
-            "method": request.method,
-            "path": request.path,
+            "ip": getattr(request, "remote_addr", ""),
+            "user_agent": getattr(request, "user_agent", ""),
+            "method": getattr(request, "method", ""),
+            "path": getattr(request, "path", ""),
             "query": query_dict,
-            "headers": request.headers,
+            "headers": getattr(request, "headers", {}),
         }
+
+    def is_ip_banned(self, ip: str) -> bool:
+        """Return True if the IP is banned, else False."""
+        result = self.ip_filter.is_allowed(ip)
+        return not result["allowed"] and result["reason"] == "IP is banned"
+
+    def check_rate_limit(self, ip: str, path: str = None) -> Dict[str, Any]:
+        """Check if the request is allowed by the rate limiter."""
+        return self.rate_limiter.check_limit(ip, path)
 
 
 class AsyncGuard:
@@ -711,7 +726,9 @@ class AsyncGuard:
         # Log the request
         await self.logger.log_request(request_info, response)
 
-    def _extract_request_info(self, request: RequestProtocol) -> Dict[str, Any]:
+    def _extract_request_info(
+        self, request: Union[RequestProtocol, Dict[str, Any]]
+    ) -> Dict[str, Any]:
         """
         Extract information from a request object.
 
@@ -719,7 +736,7 @@ class AsyncGuard:
         to properly extract request information from the framework's request object.
 
         Args:
-            request: The framework-specific request object
+            request: The framework-specific request object or a dictionary with request info
 
         Returns:
             Dict with request information:
@@ -732,19 +749,32 @@ class AsyncGuard:
                 "headers": Dict[str, str]
             }
         """
+        if isinstance(request, dict):
+            return request
+
         # Parse query string into a dictionary
         query_dict = {}
-        if request.query_string:
-            for param in request.query_string.split("&"):
-                if "=" in param:
-                    key, value = param.split("=", 1)
-                    query_dict[key] = value
+        if hasattr(request, "query_string") and request.query_string:
+            query_dict = dict(
+                pair.split("=")
+                for pair in request.query_string.split("&")
+                if "=" in pair
+            )
 
         return {
-            "ip": request.remote_addr,
-            "user_agent": request.user_agent,
-            "method": request.method,
-            "path": request.path,
+            "ip": getattr(request, "remote_addr", ""),
+            "user_agent": getattr(request, "user_agent", ""),
+            "method": getattr(request, "method", ""),
+            "path": getattr(request, "path", ""),
             "query": query_dict,
-            "headers": request.headers,
+            "headers": getattr(request, "headers", {}),
         }
+
+    async def is_ip_banned(self, ip: str) -> bool:
+        """Return True if the IP is banned, else False (async)."""
+        result = await self.ip_filter.is_allowed(ip)
+        return not result["allowed"] and result["reason"] == "IP is banned"
+
+    async def check_rate_limit(self, ip: str, path: str = None) -> Dict[str, Any]:
+        """Check if the request is allowed by the rate limiter (async)."""
+        return await self.rate_limiter.check_limit(ip, path)
