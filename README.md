@@ -55,9 +55,14 @@ Check the `examples` folder.
 
 ## Contributors
 
-<a href="https://github.com/py-daily/pywebguard/graphs/contributors">
-  <img src="https://contrib.rocks/image?repo=py-daily/pywebguard" width="80" />
-</a>
+<!-- ALL-CONTRIBUTORS-LIST:START - Do not remove or modify this section -->
+<!-- prettier-ignore-start -->
+<!-- markdownlint-disable -->
+
+<!-- markdownlint-restore -->
+<!-- prettier-ignore-end -->
+
+<!-- ALL-CONTRIBUTORS-LIST:END -->
 
 
 ## License
