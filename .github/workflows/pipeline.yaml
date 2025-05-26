@@ -135,6 +135,7 @@ jobs:
           WITH_V: true
           DEFAULT_BUMP: patch
           RELEASE_BRANCHES: main
+          TAG_PREFIX: v
           # Version bump rules:
           # - major: "major:" or "breaking:" in commit message → v(X+1).0.0
           # - minor: "feat:" or "feature:" in commit message → vX.(Y+1).0
