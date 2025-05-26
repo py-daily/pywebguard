@@ -132,7 +132,7 @@ jobs:
         uses: anothrNick/github-tag-action@1.67.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          TAG_PREFIX: v
+          WITH_V: true
           DEFAULT_BUMP: patch
           RELEASE_BRANCHES: main
           # Version bump rules:
@@ -147,8 +147,8 @@ jobs:
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         uses: softprops/action-gh-release@v1
         with:
-          name: Release ${{ steps.bump.outputs.newTag }}
-          tag_name: ${{ steps.bump.outputs.newTag }}
+          name: Release ${{ steps.bump.outputs.tag }}
+          tag_name: ${{ steps.bump.outputs.tag }}
           body: |
             ## What's Changed
             
@@ -161,7 +161,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
