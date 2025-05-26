@@ -167,7 +167,7 @@ jobs:
       - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
-          VERSION: ${{ steps.bump.outputs.newTag }}
+          VERSION: ${{ steps.bump.outputs.tag }}
         run: |
           # Upgrade pip
           python3 -m pip install --upgrade pip
@@ -176,20 +176,22 @@ jobs:
           # If requirements.txt exists, install from it
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # Install the package from setup.py
-          export VERSION=${{ steps.bump.outputs.newTag }}
-          echo $VERSION
+          # Strip 'v' prefix from version for setup.py
+          VERSION=${VERSION#v}
+          echo "Building version: $VERSION"
           python3 setup.py install
 
       # Upload to PyPi
       - name: Build and Upload to PyPi
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+        env:
+          VERSION: ${{ steps.bump.outputs.tag }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
         run: |
-          export VERSION=${{ steps.bump.outputs.newTag }}
-          echo $VERSION
+          # Strip 'v' prefix from version for setup.py
+          VERSION=${VERSION#v}
+          echo "Building version: $VERSION"
           python3 setup.py sdist bdist_wheel
           ls -la dist/
           python3 -m twine upload --verbose dist/*.whl dist/*.tar.gz
-
-        env:
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
