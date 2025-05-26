@@ -129,18 +129,19 @@ jobs:
       - name: Bump version and push tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: bump
-        uses: phips28/gh-action-bump-version@master
+        uses: anothrNick/github-tag-action@1.67.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-        with:
+          TAG_PREFIX: v
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main
           # Version bump rules:
           # - major: "major:" or "breaking:" in commit message → v(X+1).0.0
           # - minor: "feat:" or "feature:" in commit message → vX.(Y+1).0
           # - patch: "fix:" or "patch:" in commit message → vX.Y.(Z+1)
-          minor-wording: 'feat,feature'
-          major-wording: 'major,breaking'
-          patch-wording: 'fix,patch'
-          release-branches: 'main'
+          MAJOR_WORDS: major,breaking
+          MINOR_WORDS: feat,feature
+          PATCH_WORDS: fix,patch
 
       - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
@@ -160,7 +161,7 @@ jobs:
           draft: false
           prerelease: false
         env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
 
       - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
