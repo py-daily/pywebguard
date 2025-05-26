@@ -57,6 +57,24 @@ jobs:
         run: |
           pytest --verbose tests/
       
+      - name: Test FastAPI Example
+        run: |
+          cd examples/docker-fastapi
+          docker build -t pywebguard-demo .
+          docker run -d -p 8000:8000 --name pywebguard-demo pywebguard-demo
+          # Wait for the application to start
+          sleep 10
+          # Test the endpoints with a custom user agent
+          curl -f -A "PyWebGuard-Test/1.0" http://localhost:8000/ || exit 1
+          curl -f -A "PyWebGuard-Test/1.0" http://localhost:8000/api/status || exit 1
+          # Test rate limiting
+          for i in {1..6}; do
+            curl -s -A "PyWebGuard-Test/1.0" http://localhost:8000/api/protected
+          done
+          # Cleanup
+          docker stop pywebguard-demo
+          docker rm pywebguard-demo
+      
       - name: Pytest Coverage
         id: coverage
         run: |
