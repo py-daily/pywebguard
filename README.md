@@ -35,6 +35,7 @@
 <p align="center">
     <img src="https://img.shields.io/badge/Python-3776AB.svg?style=flat&amp;logo=Python&amp;logoColor=white" alt="Python">
     <img src="https://img.shields.io/badge/FastAPI-009688.svg?style=flat&amp;logo=FastAPI&amp;logoColor=white" alt="FastAPI">
+    <img src="https://img.shields.io/badge/Flask-000000.svg?style=flat&amp;logo=Flask&amp;logoColor=white" alt="Flask">
     <img src="https://img.shields.io/badge/Docker-2496ED.svg?style=flat&amp;logo=Docker&amp;logoColor=white" alt="Docker">
     <img src="https://img.shields.io/badge/Memory-4CAF50.svg?style=flat&amp;logo=Memory&amp;logoColor=white" alt="Memory">
     <img src="https://img.shields.io/badge/Redis-FF4438.svg?style=flat&amp;logo=Redis&amp;logoColor=white" alt="Redis">

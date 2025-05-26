@@ -126,28 +126,46 @@ jobs:
 
             *Status:* `${{ job.status }}`
 
-      - name: Automatic Tagging of Releases
-        uses: rymndhng/release-on-push-action@master
+      - name: Bump version and push tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        id: release
+        id: bump
+        uses: phips28/gh-action-bump-version@master
         env:
-          GITHUB_TOKEN: ${{ secrets.TOKEN_GITHUB }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
         with:
-          bump_version_scheme: ${{ vars.RELEASE_SCHEME }}
-          release_body: "The official release for pywebguard"
+          # Version bump rules:
+          # - major: "major:" or "breaking:" in commit message → v(X+1).0.0
+          # - minor: "feat:" or "feature:" in commit message → vX.(Y+1).0
+          # - patch: "fix:" or "patch:" in commit message → vX.Y.(Z+1)
+          minor-wording: 'feat,feature'
+          major-wording: 'major,breaking'
+          patch-wording: 'fix,patch'
+          release-branches: 'main'
 
-      - name: Check Release Output Parameters
+      - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        run: |
-          echo "Got tag name ${{ steps.release.outputs.tag_name }}"
-          echo "Got release version ${{ steps.release.outputs.version }}"
+        uses: softprops/action-gh-release@v1
+        with:
+          name: Release ${{ steps.bump.outputs.newTag }}
+          tag_name: ${{ steps.bump.outputs.newTag }}
+          body: |
+            ## What's Changed
+            
+            This release includes:
+            - Test coverage: ${{ steps.coverage.outputs.coverage }}%
+            - Latest security updates
+            - Bug fixes and improvements
+            
+            For detailed changes, check the [commit history](https://github.com/${{ github.repository }}/commits).
+          draft: false
+          prerelease: false
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
 
       - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         env:
-          VERSION: ${{ steps.release.outputs.version }}
+          VERSION: ${{ steps.bump.outputs.newTag }}
         run: |
           # Upgrade pip
           python3 -m pip install --upgrade pip
@@ -156,7 +174,7 @@ jobs:
           # If requirements.txt exists, install from it
           if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
           # Install the package from setup.py
-          export VERSION=${{ steps.release.outputs.version }}
+          export VERSION=${{ steps.bump.outputs.newTag }}
           echo $VERSION
           python3 setup.py install
 
@@ -164,7 +182,7 @@ jobs:
       - name: Build and Upload to PyPi
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         run: |
-          export VERSION=${{ steps.release.outputs.version }}
+          export VERSION=${{ steps.bump.outputs.newTag }}
           echo $VERSION
           python3 setup.py sdist bdist_wheel
           ls -la dist/
