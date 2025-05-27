@@ -37,7 +37,7 @@ class SecurityLogger:
         logger = logging.getLogger("pywebguard")
 
         # Ensure logs propagate to root logger
-        logger.propagate = True
+        logger.propagate = self.config.propagate
 
         # Set log level
         log_level = getattr(logging, self.config.log_level.upper(), logging.INFO)

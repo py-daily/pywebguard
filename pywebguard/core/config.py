@@ -128,6 +128,7 @@ class LoggingConfig(BaseModel):
         enabled: Whether logging is enabled
         log_file: Path to log file (None for stdout)
         log_level: Logging level (DEBUG, INFO, WARNING, ERROR, CRITICAL)
+        propagate: Whether to propagate logs to root logger
         stream: Whether to log to stdout
         stream_levels: List of levels to log to stdout
         max_log_size: Maximum log file size in bytes
@@ -145,6 +146,7 @@ class LoggingConfig(BaseModel):
     enabled: bool = True
     log_file: Optional[str] = None
     log_level: str = Field(default="INFO")
+    propagate: bool = True
     stream: bool = False
     stream_levels: List[str] = Field(default_factory=list)
     max_log_size: int = Field(default=10 * 1024 * 1024)  # 10MB
