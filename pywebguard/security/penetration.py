@@ -9,42 +9,10 @@ from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
 from pywebguard.security.base import BaseSecurityComponent, AsyncBaseSecurityComponent
 
 
-SUSPICIOUS_PATTERNS = [
-    r"(?i)(?:union\s+select|select\s+.*\s+from|insert\s+into|update\s+.*\s+set|delete\s+from)",  # SQL injection
-    r"(?i)(?:<script>|javascript:|onerror=|onload=|eval\(|setTimeout\(|document\.cookie)",  # XSS
-    r"(?i)(?:\.\.\/|\.\.\\|\/etc\/passwd|\/bin\/bash|cmd\.exe|command\.com)",  # Path traversal
-    r"(?i)(?:\/wp-admin|\/wp-login|\/administrator|\/admin|\/phpmyadmin)",  # Common admin paths
-    r"(?i)(?:\.env|\.git|\.github|\.gitignore|\.gitattributes|\.gitmodules|\.gitlab|\.gitlab-ci\.yml)",  # Version control and env files
-    r"(?i)(?:\.DS_Store|\.idea|\.vscode|\.sublime|\.config|\.local|\.ssh|\.aws|\.npm|\.yarn)",  # IDE and config files
-    r"(?i)(?:\.log|\.sql|\.bak|\.backup|\.old|\.swp|\.swo|\.tmp|\.temp|\.cache)",  # Backup and log files
-    r"(?i)(?:\.htaccess|\.htpasswd|\.htgroup|\.htdigest|\.htdbm|\.htpass)",  # Apache config files
-    r"(?i)(?:\.ini|\.conf|\.config|\.properties|\.xml|\.json|\.yaml|\.yml)",  # Config files
-    r"(?i)(?:\.pem|\.key|\.crt|\.cer|\.der|\.p12|\.pfx|\.p7b|\.p7c|\.p7m|\.p7s)",  # Certificate and key files
-    r"(?i)(?:\.db|\.sqlite|\.sqlite3|\.mdb|\.accdb|\.dbf|\.mdf|\.ldf|\.ndf)",  # Database files
-    r"(?i)(?:\.php|\.asp|\.aspx|\.jsp|\.jspx|\.do|\.action|\.cgi|\.pl|\.py|\.rb|\.sh)",  # Script files
-    r"(?i)(?:\.exe|\.dll|\.so|\.dylib|\.jar|\.war|\.ear|\.apk|\.ipa|\.app)",  # Executable files
-    r"(?i)(?:\.zip|\.tar|\.gz|\.rar|\.7z|\.bz2|\.xz|\.tgz|\.tbz2|\.txz)",  # Archive files
-    r"(?i)(?:\.pdf|\.doc|\.docx|\.xls|\.xlsx|\.ppt|\.pptx|\.odt|\.ods|\.odp)",  # Document files
-    r"(?i)(?:\.jpg|\.jpeg|\.png|\.gif|\.bmp|\.tiff|\.webp|\.svg|\.ico)",  # Image files
-    r"(?i)(?:\.mp3|\.mp4|\.avi|\.mov|\.wmv|\.flv|\.wav|\.ogg|\.m4a|\.m4v)",  # Media files
-    r"(?i)(?:\.ttf|\.otf|\.woff|\.woff2|\.eot|\.sfnt|\.pfb|\.pfa|\.bdf|\.pcf)",  # Font files
-    r"(?i)(?:\.css|\.scss|\.sass|\.less|\.styl|\.stylus|\.postcss)",  # Style files
-    r"(?i)(?:\.js|\.jsx|\.ts|\.tsx|\.coffee|\.litcoffee|\.coffee\.md)",  # Script files
-    r"(?i)(?:\.html|\.htm|\.xhtml|\.shtml|\.phtml|\.jhtml|\.dhtml)",  # HTML files
-    r"(?i)(?:\.txt|\.text|\.md|\.markdown|\.rst|\.asciidoc|\.adoc|\.asc)",  # Text files
-    r"(?i)(?:\.csv|\.tsv|\.tab|\.dat|\.data|\.raw|\.bin|\.hex)",  # Data files
-    r"(?i)(?:\.lock|\.pid|\.sock|\.socket|\.fifo|\.pipe|\.sem|\.shm)",  # System files
-    r"(?i)(?:\.bak|\.backup|\.old|\.new|\.tmp|\.temp|\.cache|\.swap)",  # Temporary files
-]
-
-
 class PenetrationDetector(BaseSecurityComponent):
     """
     Detect potential penetration attempts (synchronous).
     """
-
-    # Default suspicious patterns
-    DEFAULT_SUSPICIOUS_PATTERNS = SUSPICIOUS_PATTERNS
 
     def __init__(
         self,
@@ -73,12 +41,7 @@ class PenetrationDetector(BaseSecurityComponent):
         """
         patterns = []
 
-        # Use default patterns if none are specified
-        suspicious_patterns = (
-            self.config.suspicious_patterns or self.DEFAULT_SUSPICIOUS_PATTERNS
-        )
-
-        for pattern in suspicious_patterns:
+        for pattern in self.config.suspicious_patterns:
             try:
                 patterns.append(re.compile(pattern))
             except re.error:
@@ -166,9 +129,6 @@ class AsyncPenetrationDetector(AsyncBaseSecurityComponent):
     Detect potential penetration attempts asynchronously.
     """
 
-    # Default suspicious patterns
-    DEFAULT_SUSPICIOUS_PATTERNS = SUSPICIOUS_PATTERNS
-
     def __init__(
         self,
         config: PenetrationDetectionConfig,
@@ -196,12 +156,7 @@ class AsyncPenetrationDetector(AsyncBaseSecurityComponent):
         """
         patterns = []
 
-        # Use default patterns if none are specified
-        suspicious_patterns = (
-            self.config.suspicious_patterns or self.DEFAULT_SUSPICIOUS_PATTERNS
-        )
-
-        for pattern in suspicious_patterns:
+        for pattern in self.config.suspicious_patterns:
             try:
                 patterns.append(re.compile(pattern))
             except re.error:
