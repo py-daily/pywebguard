@@ -96,7 +96,7 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
             if blocked_agent.lower() in user_agent.lower():
                 return {
                     "allowed": False,
-                    "reason": f"Blocked user agent: {blocked_agent}",
+                    "reason": f"Blocked user agent: '{blocked_agent}'",
                 }
 
         return {"allowed": True, "reason": ""}

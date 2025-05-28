@@ -96,7 +96,7 @@ class PenetrationDetectionConfig(BaseModel):
 
     enabled: bool = True
     log_suspicious: bool = True
-    suspicious_patterns: List[str] = Field(default_factory=list)
+    suspicious_patterns: Optional[List[str]] = Field(default_factory=list)
 
 
 class CORSConfig(BaseModel):

@@ -134,6 +134,13 @@ class FastAPIGuard(BaseHTTPMiddleware):
             request.app.state.guard = self
 
         client_ip = request.client.host
+        user_agent = request.headers.get("user-agent", "")
+
+        # Handle CORS preflight requests
+        if request.method == "OPTIONS" and self.guard.config.cors.enabled:
+            response = await call_next(request)
+            await self.guard.cors_handler.add_cors_headers(request, response)
+            return response
 
         # Check if IP is banned first
         is_banned = await self.guard.is_ip_banned(client_ip)
@@ -148,7 +155,7 @@ class FastAPIGuard(BaseHTTPMiddleware):
                 "ip": client_ip,
                 "method": request.method,
                 "path": request.url.path,
-                "user_agent": request.headers.get("user-agent", "unknown"),
+                "user_agent": user_agent,
             }
             await self.guard.logger.log_blocked_request(
                 request_info,
@@ -156,6 +163,25 @@ class FastAPIGuard(BaseHTTPMiddleware):
                 f"IP is banned: {ban_info.get('reason', 'Unknown reason')}",
             )
             return response
+
+        # Check user agent
+        if self.guard.config.user_agent.enabled:
+            user_agent_check = await self.guard.user_agent_filter.is_allowed(user_agent)
+            if not user_agent_check["allowed"]:
+                response = await self.custom_response_handler(
+                    request, user_agent_check["reason"]
+                )
+                # Log blocked request
+                request_info = {
+                    "ip": client_ip,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "user_agent": user_agent,
+                }
+                await self.guard.logger.log_blocked_request(
+                    request_info, "user_agent", user_agent_check["reason"]
+                )
+                return response
 
         # Check rate limits
         rate_info = await self.guard.rate_limiter.check_limit(
@@ -168,7 +194,7 @@ class FastAPIGuard(BaseHTTPMiddleware):
                 "ip": client_ip,
                 "method": request.method,
                 "path": request.url.path,
-                "user_agent": request.headers.get("user-agent", "unknown"),
+                "user_agent": user_agent,
             }
             await self.guard.logger.log_security_event(
                 "WARNING",
@@ -176,15 +202,51 @@ class FastAPIGuard(BaseHTTPMiddleware):
             )
             return response
 
+        # Check for penetration attempts
+        if self.guard.config.penetration.enabled:
+            request_info = {
+                "ip": client_ip,
+                "method": request.method,
+                "path": request.url.path,
+                "query": dict(request.query_params),
+                "headers": dict(request.headers),
+                "user_agent": user_agent,
+            }
+            penetration_check = await self.guard.penetration_detector.check_request(
+                request_info
+            )
+            if not penetration_check["allowed"]:
+                response = await self.custom_response_handler(
+                    request, penetration_check["reason"]
+                )
+                # Log blocked request
+                await self.guard.logger.log_blocked_request(
+                    request_info, "penetration", penetration_check["reason"]
+                )
+                return response
+
         # Continue with the request
         response = await call_next(request)
+
+        # Add security headers
+        response.headers["X-Content-Type-Options"] = "nosniff"
+        response.headers["X-Frame-Options"] = "DENY"
+        response.headers["X-XSS-Protection"] = "1; mode=block"
+        response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+        response.headers["Permissions-Policy"] = (
+            "geolocation=(), microphone=(), camera=()"
+        )
+
+        # Add CORS headers if enabled
+        if self.guard.config.cors.enabled:
+            await self.guard.cors_handler.add_cors_headers(request, response)
 
         # Log successful request
         request_info = {
             "ip": client_ip,
             "method": request.method,
             "path": request.url.path,
-            "user_agent": request.headers.get("user-agent", "unknown"),
+            "user_agent": user_agent,
         }
         await self.guard.logger.log_request(request_info, response)
 
