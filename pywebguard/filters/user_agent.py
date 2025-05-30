@@ -40,14 +40,15 @@ class UserAgentFilter(BaseFilter):
         Returns:
             Dict with allowed status and reason
         """
+
+        if not self.config.enabled:
+            return {"allowed": True, "reason": ""}
+
         if path in self.config.excluded_paths:
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",
             }
-
-        if not self.config.enabled:
-            return {"allowed": True, "reason": ""}
 
         if not user_agent:
             return {"allowed": False, "reason": "Empty user agent"}
@@ -95,11 +96,14 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         Returns:
             Dict with allowed status and reason
         """
-        if path in self.config.excluded_paths:
-            return {"allowed": True, "reason": ""}
+
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
-
+        if path in self.config.excluded_paths:
+            return {
+                "allowed": True,
+                "reason": "Path excluded from user-agent filtering",
+            }
         if not user_agent:
             return {"allowed": False, "reason": "Empty user agent"}
 
