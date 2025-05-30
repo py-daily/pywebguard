@@ -76,15 +76,19 @@ class RateLimitConfig(BaseModel):
 
 
 class UserAgentConfig(BaseModel):
-    """Configuration for user agent filtering.
+    """
+    Configuration for user-agent filtering.
 
     Attributes:
-        enabled: Whether user agent filtering is enabled
-        blocked_agents: List of blocked user agent strings
+        enabled (bool): Flag to enable or disable user-agent filtering.
+        blocked_agents (List[str]): List of user-agent substrings to block (e.g., 'curl', 'wget').
+        excluded_paths (List[str]): List of endpoint paths where user-agent filtering should be bypassed.
+            Useful for allowing monitoring tools to access health check endpoints like '/ready' or '/healthz'.
     """
 
     enabled: bool = True
     blocked_agents: List[str] = Field(default_factory=list)
+    excluded_paths: List[str] = Field(default_factory=list)
 
 
 class PenetrationDetectionConfig(BaseModel):

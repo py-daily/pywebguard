@@ -2,7 +2,7 @@
 User agent filtering functionality for PyWebGuard with both sync and async support.
 """
 
-from typing import Dict, Union
+from typing import Dict, Optional, Union
 from pywebguard.core.config import UserAgentConfig
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
 from pywebguard.filters.base import BaseFilter, AsyncBaseFilter
@@ -28,7 +28,9 @@ class UserAgentFilter(BaseFilter):
         self.config = config
         self.storage = storage
 
-    def is_allowed(self, user_agent: str) -> Dict[str, Union[bool, str]]:
+    def is_allowed(
+        self, user_agent: str, path: Optional[str] = None
+    ) -> Dict[str, Union[bool, str]]:
         """
         Check if a user agent is allowed.
 
@@ -38,6 +40,12 @@ class UserAgentFilter(BaseFilter):
         Returns:
             Dict with allowed status and reason
         """
+        if path in self.config.excluded_paths:
+            return {
+                "allowed": True,
+                "reason": "Path excluded from user-agent filtering",
+            }
+
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
@@ -75,7 +83,9 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         self.config = config
         self.storage = storage
 
-    async def is_allowed(self, user_agent: str) -> Dict[str, Union[bool, str]]:
+    async def is_allowed(
+        self, user_agent: str, path: Optional[str] = None
+    ) -> Dict[str, Union[bool, str]]:
         """
         Check if a user agent is allowed asynchronously.
 
@@ -85,6 +95,8 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         Returns:
             Dict with allowed status and reason
         """
+        if path in self.config.excluded_paths:
+            return {"allowed": True, "reason": ""}
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 

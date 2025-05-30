@@ -18,7 +18,7 @@ config = GuardConfig()
 config = GuardConfig(
     ip_filter={"whitelist": ["127.0.0.1"]},
     rate_limit={"requests_per_minute": 100},
-    user_agent={"blocked_agents": ["curl", "wget"]}
+    user_agent={"blocked_agents": ["curl", "wget"], "excluded_paths": ["/ready", "/healthz"]}
 )
 ```
 
@@ -114,13 +114,15 @@ from pywebguard.core.config import UserAgentConfig
 # Create user agent configuration
 user_agent = UserAgentConfig(
     enabled=True,
-    blocked_agents=["curl", "wget", "python-requests"]
+    blocked_agents=["curl", "wget", "python-requests"],
+    excluded_paths= ["/ready", "/healthz"]
 )
 
 # Or as a dictionary
 user_agent_dict = {
     "enabled": True,
-    "blocked_agents": ["curl", "wget", "python-requests"]
+    "blocked_agents": ["curl", "wget", "python-requests"],
+     "excluded_paths": ["/ready", "/healthz"]
 }
 ```
 
@@ -128,6 +130,8 @@ user_agent_dict = {
 
 - `enabled`: Whether user agent filtering is enabled (default: `True`)
 - `blocked_agents`: List of blocked user agent strings (default: `[]`)
+- `excluded_paths`: List of endpoint paths where user-agent filtering should be bypassed.
+        Useful for allowing monitoring tools to access health check endpoints like '/ready' or '/healthz'. (default: `[]`)
 
 ## Penetration Detection Configuration
 
@@ -299,7 +303,8 @@ config = GuardConfig(
     },
     user_agent={
         "enabled": True,
-        "blocked_agents": ["curl", "wget", "python-requests"]
+        "blocked_agents": ["curl", "wget", "python-requests"],
+         "excluded_paths": ["/ready"]
     },
     penetration={
         "enabled": True,

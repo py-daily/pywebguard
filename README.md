@@ -156,6 +156,7 @@ config = GuardConfig(
     user_agent={
         "enabled": True,
         "blocked_agents": ["curl", "wget", "Scrapy", "bot", "Bot"],
+        "excluded_paths": ["/ready", "/healthz"]
     },
     cors={
         "enabled": True,
