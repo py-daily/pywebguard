@@ -347,7 +347,9 @@ class Guard:
             }
 
         # Check user agent filter
-        ua_result = self.user_agent_filter.is_allowed(request_info["user_agent"])
+        ua_result = self.user_agent_filter.is_allowed(
+            request_info["user_agent"], request_info["path"]
+        )
         if not ua_result["allowed"]:
             self.logger.log_blocked_request(
                 request_info, "User agent filter", ua_result["reason"]
