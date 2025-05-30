@@ -681,7 +681,9 @@ class AsyncGuard:
             }
 
         # Check user agent filter
-        ua_result = await self.user_agent_filter.is_allowed(request_info["user_agent"])
+        ua_result = await self.user_agent_filter.is_allowed(
+            request_info["user_agent"], path=request_info["path"]
+        )
         if not ua_result["allowed"]:
             await self.logger.log_blocked_request(
                 request_info, "User agent filter", ua_result["reason"]
