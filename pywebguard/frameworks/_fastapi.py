@@ -166,7 +166,9 @@ class FastAPIGuard(BaseHTTPMiddleware):
 
         # Check user agent
         if self.guard.config.user_agent.enabled:
-            user_agent_check = await self.guard.user_agent_filter.is_allowed(user_agent)
+            user_agent_check = await self.guard.user_agent_filter.is_allowed(
+                user_agent, path=request.url.path
+            )
             if not user_agent_check["allowed"]:
                 response = await self.custom_response_handler(
                     request, user_agent_check["reason"]
