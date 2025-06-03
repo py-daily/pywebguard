@@ -81,59 +81,88 @@ async def custom_response_handler(request: Request, reason: str) -> Response:
 # Create FastAPI app
 app = FastAPI(
     title="PyWebGuard FastAPI Example",
-    description="Example of PyWebGuard integration with FastAPI",
+    description="A comprehensive example of PyWebGuard integration with FastAPI",
     version="1.0.0",
 )
 
-# Configure PyWebGuard
+# Configure PyWebGuard with detailed settings
 config = GuardConfig(
+    # IP filtering configuration
     ip_filter={
         "enabled": True,
-        "whitelist": ["127.0.0.1", "::1"],  # Allow localhost
-        "blacklist": [],  # No blacklisted IPs
+        "whitelist": ["127.0.0.1", "::1", "192.168.1.0/24"],
+        "blacklist": ["10.0.0.1", "172.16.0.0/16"],
     },
+    # Global rate limiting configuration
     rate_limit={
         "enabled": True,
-        "requests_per_minute": 60,  # 60 requests per minute
-        "burst_size": 10,  # Allow bursts of 10 requests
-        "auto_ban_threshold": 100,  # Ban after 100 requests
-        "auto_ban_duration": 3600,  # Ban for 1 hour
+        "requests_per_minute": 100,
+        "burst_size": 20,
+        "auto_ban_threshold": 200,
+        "auto_ban_duration": 3600,  # 1 hour in seconds
     },
+    # User agent filtering
     user_agent={
         "enabled": True,
-        "blocked_agents": ["curl", "wget", "Scrapy"],  # Block common scraping tools
+        "blocked_agents": ["curl", "wget", "Scrapy", "bot", "Bot"],
     },
+    # CORS configuration
     cors={
         "enabled": True,
-        "allow_origins": ["*"],  # Allow all origins for testing
-        "allow_methods": ["*"],  # Allow all methods
-        "allow_headers": ["*"],  # Allow all headers
+        "allow_origins": ["http://localhost:3000", "https://example.com"],
+        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
+        "allow_headers": ["Content-Type", "Authorization"],
+        "allow_credentials": True,
+        "max_age": 3600,
     },
+    # Penetration detection
     penetration={
         "enabled": True,
         "detect_sql_injection": True,
         "detect_xss": True,
         "detect_path_traversal": True,
+        "block_suspicious_requests": True,
     },
+    # Logging configuration
     logging={
         "enabled": True,
-        "level": "DEBUG",
+        "level": "DEBUG",  # Change to DEBUG to see all messages
         "log_blocked_requests": True,
+        "stream": True,
+        "stream_levels": ["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
+        "meilisearch": {
+            "url": "https://meilisearch.dev.ktechhub.com",
+            "api_key": os.getenv("MEILISEARCH_API_KEY"),
+            "index_name": "pywebguard",
+        },
     },
 )
 
-# Configure route-specific rate limits
+# Define route-specific rate limits
 route_rate_limits = [
     {
-        "endpoint": "/api/sensitive",
-        "requests_per_minute": 10,  # More strict rate limit for sensitive endpoint
+        "endpoint": "/api/limited",
+        "requests_per_minute": 5,
         "burst_size": 2,
-        "auto_ban_threshold": 20,
+        "auto_ban_threshold": 10,
+        "auto_ban_duration": 1800,  # 30 minutes
+    },
+    {
+        "endpoint": "/api/uploads/*",
+        "requests_per_minute": 10,
+        "burst_size": 5,
+        "auto_ban_duration": 1800,
+    },
+    {
+        "endpoint": "/api/admin/**",
+        "requests_per_minute": 20,
+        "burst_size": 5,
+        "auto_ban_threshold": 50,
         "auto_ban_duration": 7200,  # 2 hours
-    }
+    },
 ]
 
-# Initialize storage
+# Initialize storage (async in-memory for this example)
 storage = AsyncMemoryStorage()
 
 # Uncomment to use Redis storage instead
@@ -145,6 +174,7 @@ app.add_middleware(
     config=config,
     storage=storage,
     route_rate_limits=route_rate_limits,
+    # custom_response_handler=custom_response_handler,
 )
 
 # Print debug info about route configurations
@@ -154,22 +184,34 @@ for route in route_rate_limits:
 
 
 # Basic routes
-@app.get("/")
+@app.get("/", tags=["main"])
 async def root():
-    """Root endpoint with default rate limit"""
-    return {"message": "Hello World - Default rate limit (60 req/min)"}
+    """Root endpoint with default rate limit (100 req/min)"""
+    return {"message": "Hello World - Default rate limit (100 req/min)"}
 
 
-@app.get("/api/sensitive")
-async def sensitive_endpoint():
-    """Sensitive endpoint with stricter rate limit"""
-    return {"message": "This is a sensitive endpoint - Rate limit (10 req/min)"}
+@app.get("/api/limited", tags=["main"])
+async def limited_endpoint():
+    """Strictly rate limited endpoint (5 req/min)"""
+    return {"message": "This endpoint is strictly rate limited (5 req/min)"}
 
 
-@app.get("/api/blocked")
-async def blocked_endpoint():
-    """This endpoint will be blocked by user agent filter"""
-    return {"message": "This endpoint should be blocked for certain user agents"}
+@app.get("/api/uploads/files", tags=["main"])
+async def upload_files():
+    """File upload endpoint with custom rate limit (10 req/min)"""
+    return {"message": "File upload endpoint with custom rate limit (10 req/min)"}
+
+
+@app.get("/api/admin/dashboard", tags=["main"])
+async def admin_dashboard():
+    """Admin dashboard with custom rate limit (20 req/min)"""
+    return {"message": "Admin dashboard with custom rate limit (20 req/min)"}
+
+
+@app.get("/api/admin/users/list", tags=["main"])
+async def admin_users():
+    """Admin users list with custom rate limit (20 req/min)"""
+    return {"message": "Admin users list with custom rate limit (20 req/min)"}
 
 
 @app.get("/protected", tags=["main"])
@@ -266,7 +308,7 @@ async def get_metrics(request: Request):
     guard = request.app.state.guard
     # Get rate limit info for all paths
     rate_limits = {}
-    for path in ["/", "/api/sensitive", "/api/blocked"]:
+    for path in ["/", "/api/limited", "/api/uploads/*", "/api/admin/**"]:
         rate_info = await guard.guard.rate_limiter.check_limit(
             request.client.host, path
         )
