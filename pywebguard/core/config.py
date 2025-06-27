@@ -376,7 +376,7 @@ class GuardConfig(BaseModel):
             PYWEBGUARD_RATE_LIMIT_BURST: Burst size
             PYWEBGUARD_RATE_LIMIT_BAN_THRESHOLD: Auto-ban threshold
             PYWEBGUARD_RATE_LIMIT_BAN_DURATION: Auto-ban duration in minutes
-
+            PYWEBGUARD_RATE_LIMIT_EXCLUDED_PATHS: Comma-separated list of paths to exclude from rate limiting
             PYWEBGUARD_IP_FILTER_ENABLED: Whether IP filtering is enabled (true/false)
             PYWEBGUARD_IP_WHITELIST: Comma-separated list of whitelisted IPs
             PYWEBGUARD_IP_BLACKLIST: Comma-separated list of blacklisted IPs
@@ -436,7 +436,11 @@ class GuardConfig(BaseModel):
         rate_limit_ban_duration = os.environ.get("PYWEBGUARD_RATE_LIMIT_BAN_DURATION")
         if rate_limit_ban_duration and rate_limit_ban_duration.isdigit():
             config.rate_limit.auto_ban_duration_minutes = int(rate_limit_ban_duration)
-
+        excluded_paths = os.environ.get("PYWEBGUARD_RATE_LIMIT_EXCLUDED_PATHS")
+        if excluded_paths:
+            config.rate_limit.excluded_paths = [
+                path.strip() for path in excluded_paths.split(",")
+            ]
         # IP filter configuration
         ip_filter_enabled = os.environ.get("PYWEBGUARD_IP_FILTER_ENABLED")
         if ip_filter_enabled is not None:
