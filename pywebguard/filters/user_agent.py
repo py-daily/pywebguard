@@ -65,7 +65,7 @@ class UserAgentFilter(BaseFilter):
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
-        if self._is_path_exempt(path, self.config.excluded_paths):
+        if path and self._is_path_exempt(path, self.config.excluded_paths):
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",
