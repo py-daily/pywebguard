@@ -2,6 +2,7 @@
 User agent filtering functionality for PyWebGuard with both sync and async support.
 """
 
+import re
 from typing import Dict, Optional, Union
 from pywebguard.core.config import UserAgentConfig
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
@@ -28,6 +29,26 @@ class UserAgentFilter(BaseFilter):
         self.config = config
         self.storage = storage
 
+    def __path_to_regex(self, pattern: str) -> str:
+        parts = pattern.strip("/").split("/")
+        regex_parts = []
+
+        for part in parts:
+            if part == "**":
+                regex_parts.append(".*")
+            elif part == "*":
+                regex_parts.append("[^/]+")
+            else:
+                regex_parts.append(re.escape(part))
+
+        regex = "^/" + "/".join(regex_parts) + "/?$"
+        return regex
+
+    def _is_path_exempt(self, path: str, excluded_patterns: list[str]) -> bool:
+        return any(
+            re.match(self.__path_to_regex(p), path) for p in excluded_patterns or []
+        )
+
     def is_allowed(
         self, user_agent: str, path: Optional[str] = None
     ) -> Dict[str, Union[bool, str]]:
@@ -44,7 +65,7 @@ class UserAgentFilter(BaseFilter):
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
-        if path in self.config.excluded_paths:
+        if self._is_path_exempt(path, self.config.excluded_paths):
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",
@@ -84,6 +105,27 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         self.config = config
         self.storage = storage
 
+    def __path_to_regex(self, pattern: str) -> str:
+        parts = pattern.strip("/").split("/")
+        regex_parts = []
+
+        for part in parts:
+            if part == "**":
+                regex_parts.append(".*")
+            elif part == "*":
+                regex_parts.append("[^/]+")
+            else:
+                regex_parts.append(re.escape(part))
+
+        regex = "^/" + "/".join(regex_parts) + "/?$"
+        return regex
+
+    def _is_path_exempt(self, path: str, excluded_patterns: list[str]) -> bool:
+
+        return any(
+            re.match(self.__path_to_regex(p), path) for p in excluded_patterns or []
+        )
+
     async def is_allowed(
         self, user_agent: str, path: Optional[str] = None
     ) -> Dict[str, Union[bool, str]]:
@@ -96,10 +138,11 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         Returns:
             Dict with allowed status and reason
         """
-
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
-        if path in self.config.excluded_paths:
+        if path and self._is_path_exempt(path, self.config.excluded_paths):
+            print("Path excluded from user-agent filtering")
+            print(path)
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",
