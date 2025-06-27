@@ -65,7 +65,7 @@ class UserAgentFilter(BaseFilter):
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
 
-        if path and self._is_path_exempt(path, self.config.excluded_paths):
+        if path is not None and self._is_path_exempt(path, self.config.excluded_paths):
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",
@@ -140,9 +140,7 @@ class AsyncUserAgentFilter(AsyncBaseFilter):
         """
         if not self.config.enabled:
             return {"allowed": True, "reason": ""}
-        if path and self._is_path_exempt(path, self.config.excluded_paths):
-            print("Path excluded from user-agent filtering")
-            print(path)
+        if path is not None and self._is_path_exempt(path, self.config.excluded_paths):
             return {
                 "allowed": True,
                 "reason": "Path excluded from user-agent filtering",

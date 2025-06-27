@@ -73,6 +73,7 @@ class RateLimitConfig(BaseModel):
     burst_size: int = Field(default=10, ge=0)
     auto_ban_threshold: int = Field(default=100, ge=1)
     auto_ban_duration_minutes: int = Field(default=60, ge=1)
+    excluded_paths: List[str] = Field(default_factory=list)
 
 
 class UserAgentConfig(BaseModel):
