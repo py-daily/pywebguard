@@ -51,6 +51,7 @@ logger.setLevel(logging.DEBUG)
 # Create Flask app
 app = Flask(__name__)
 
+
 # Custom response handler for blocked requests
 def custom_response_handler(reason: str) -> Response:
     """
@@ -64,15 +65,18 @@ def custom_response_handler(reason: str) -> Response:
     """
     status_code = 429 if "rate limit" in reason.lower() else 403
 
-    response = jsonify({
-        "error": "Request blocked",
-        "reason": reason,
-        "timestamp": time.time(),
-        "path": request.path,
-        "method": request.method,
-    })
+    response = jsonify(
+        {
+            "error": "Request blocked",
+            "reason": reason,
+            "timestamp": time.time(),
+            "path": request.path,
+            "method": request.method,
+        }
+    )
     response.status_code = status_code
     return response
+
 
 # Configure PyWebGuard
 config = GuardConfig(
@@ -147,30 +151,41 @@ print("[DEBUG] Route rate limits configuration:")
 for route in route_rate_limits:
     print(f"  {route['endpoint']}: {route['requests_per_minute']} req/min")
 
+
 # Basic routes
 @app.route("/", methods=["GET"])
 def root():
     """Root endpoint with default rate limit"""
     return jsonify({"message": "Hello World - Default rate limit (60 req/min)"})
 
+
 @app.route("/api/sensitive", methods=["GET"])
 def sensitive_endpoint():
     """Sensitive endpoint with stricter rate limit"""
-    return jsonify({"message": "This is a sensitive endpoint - Rate limit (10 req/min)"})
+    return jsonify(
+        {"message": "This is a sensitive endpoint - Rate limit (10 req/min)"}
+    )
+
 
 @app.route("/api/blocked", methods=["GET"])
 def blocked_endpoint():
     """This endpoint will be blocked by user agent filter"""
-    return jsonify({"message": "This endpoint should be blocked for certain user agents"})
+    return jsonify(
+        {"message": "This endpoint should be blocked for certain user agents"}
+    )
+
 
 @app.route("/protected", methods=["GET"])
 def protected():
     """Protected endpoint with default rate limit"""
-    return jsonify({
-        "message": "This is a protected endpoint with default rate limit",
-        "client_ip": request.remote_addr,
-        "user_agent": request.user_agent.string,
-    })
+    return jsonify(
+        {
+            "message": "This is a protected endpoint with default rate limit",
+            "client_ip": request.remote_addr,
+            "user_agent": request.user_agent.string,
+        }
+    )
+
 
 # Example of a path that might trigger penetration detection
 @app.route("/search", methods=["GET"])
@@ -183,6 +198,7 @@ def search():
     """
     q = request.args.get("q", "")
     return jsonify({"results": f"Search results for: {q}"})
+
 
 # Helper endpoint to check remaining rate limits
 @app.route("/rate-limit-status", methods=["GET"])
@@ -199,13 +215,16 @@ def rate_limit_status():
     # Get rate limit info for the specified path
     rate_info = guard.guard.rate_limiter.check_limit(client_ip, path)
 
-    return jsonify({
-        "path": path,
-        "allowed": rate_info["allowed"],
-        "remaining": rate_info["remaining"],
-        "reset": rate_info["reset"],
-        "client_ip": client_ip,
-    })
+    return jsonify(
+        {
+            "path": path,
+            "allowed": rate_info["allowed"],
+            "remaining": rate_info["remaining"],
+            "reset": rate_info["reset"],
+            "client_ip": client_ip,
+        }
+    )
+
 
 # Endpoint to check if an IP is banned
 @app.route("/check-ban-status", methods=["GET"])
@@ -219,11 +238,14 @@ def check_ban_status():
     check_ip = request.args.get("ip", request.remote_addr)
     is_banned = guard.guard.is_ip_banned(check_ip)
 
-    return jsonify({
-        "ip": check_ip,
-        "is_banned": is_banned,
-        "timestamp": time.time(),
-    })
+    return jsonify(
+        {
+            "ip": check_ip,
+            "is_banned": is_banned,
+            "timestamp": time.time(),
+        }
+    )
+
 
 # Admin endpoint to get metrics
 @app.route("/admin/metrics", methods=["GET"])
@@ -237,10 +259,13 @@ def get_metrics():
     # This would typically be protected by authentication
     metrics = guard.guard.get_metrics()
 
-    return jsonify({
-        "timestamp": time.time(),
-        "metrics": metrics,
-    })
+    return jsonify(
+        {
+            "timestamp": time.time(),
+            "metrics": metrics,
+        }
+    )
+
 
 # Admin endpoint to ban an IP
 @app.route("/admin/ban-ip", methods=["POST"])
@@ -261,10 +286,13 @@ def ban_ip():
 
     guard.guard.ban_ip(ip, duration)
 
-    return jsonify({
-        "message": f"IP {ip} banned for {duration} seconds",
-        "timestamp": time.time(),
-    })
+    return jsonify(
+        {
+            "message": f"IP {ip} banned for {duration} seconds",
+            "timestamp": time.time(),
+        }
+    )
+
 
 # Admin endpoint to unban an IP
 @app.route("/admin/unban-ip", methods=["POST"])
@@ -284,10 +312,13 @@ def unban_ip():
 
     guard.guard.unban_ip(ip)
 
-    return jsonify({
-        "message": f"IP {ip} unbanned",
-        "timestamp": time.time(),
-    })
+    return jsonify(
+        {
+            "message": f"IP {ip} unbanned",
+            "timestamp": time.time(),
+        }
+    )
+
 
 if __name__ == "__main__":
     logger.info("Starting PyWebGuard Flask example server...")

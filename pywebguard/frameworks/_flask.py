@@ -96,13 +96,18 @@ class FlaskGuard:
         """
         status_code = 429 if "rate limit" in reason.lower() else 403
 
-        return jsonify({
-            "error": "Request blocked",
-            "reason": reason,
-            "timestamp": time.time(),
-            "path": request.path,
-            "method": request.method,
-        }), status_code
+        return (
+            jsonify(
+                {
+                    "error": "Request blocked",
+                    "reason": reason,
+                    "timestamp": time.time(),
+                    "path": request.path,
+                    "method": request.method,
+                }
+            ),
+            status_code,
+        )
 
     def init_app(self, app: Flask) -> None:
         """
@@ -123,93 +128,18 @@ class FlaskGuard:
             Returns:
                 Response object if request is blocked, None otherwise
             """
-            client_ip = request.remote_addr
-            user_agent = request.headers.get("user-agent", "")
-
             # Handle CORS preflight requests
             if request.method == "OPTIONS" and self.guard.config.cors.enabled:
                 return None
 
-            # Check if IP is banned first
-            is_banned = self.guard.is_ip_banned(client_ip)
-            if is_banned:
-                ban_info = self.guard.storage.get(f"banned_ip:{client_ip}")
+            # Use the guard's check_request method to perform all security checks
+            check_result = self.guard.check_request(request)
+            
+            if not check_result["allowed"]:
                 response = self.custom_response_handler(
-                    request,
-                    f"IP is banned: {ban_info.get('reason', 'Unknown reason')}",
-                )
-                # Log blocked request
-                request_info = {
-                    "ip": client_ip,
-                    "method": request.method,
-                    "path": request.path,
-                    "user_agent": user_agent,
-                }
-                self.guard.logger.log_blocked_request(
-                    request_info,
-                    "ip_ban",
-                    f"IP is banned: {ban_info.get('reason', 'Unknown reason')}",
+                    request, check_result["details"]["reason"]
                 )
                 return response
-
-            # Check user agent
-            if self.guard.config.user_agent.enabled:
-                user_agent_check = self.guard.user_agent_filter.is_allowed(user_agent)
-                if not user_agent_check["allowed"]:
-                    response = self.custom_response_handler(
-                        request, user_agent_check["reason"]
-                    )
-                    # Log blocked request
-                    request_info = {
-                        "ip": client_ip,
-                        "method": request.method,
-                        "path": request.path,
-                        "user_agent": user_agent,
-                    }
-                    self.guard.logger.log_blocked_request(
-                        request_info, "user_agent", user_agent_check["reason"]
-                    )
-                    return response
-
-            # Check rate limits
-            rate_info = self.guard.rate_limiter.check_limit(client_ip, request.path)
-            if not rate_info["allowed"]:
-                response = self.custom_response_handler(request, rate_info["reason"])
-                # Log blocked request
-                request_info = {
-                    "ip": client_ip,
-                    "method": request.method,
-                    "path": request.path,
-                    "user_agent": user_agent,
-                }
-                self.guard.logger.log_security_event(
-                    "WARNING",
-                    f"Blocked request: {request.method} {request.path} - {rate_info['reason']}",
-                )
-                return response
-
-            # Check for penetration attempts
-            if self.guard.config.penetration.enabled:
-                request_info = {
-                    "ip": client_ip,
-                    "method": request.method,
-                    "path": request.path,
-                    "query": request.args.to_dict(),
-                    "headers": dict(request.headers),
-                    "user_agent": user_agent,
-                }
-                penetration_check = self.guard.penetration_detector.check_request(
-                    request_info
-                )
-                if not penetration_check["allowed"]:
-                    response = self.custom_response_handler(
-                        request, penetration_check["reason"]
-                    )
-                    # Log blocked request
-                    self.guard.logger.log_blocked_request(
-                        request_info, "penetration", penetration_check["reason"]
-                    )
-                    return response
 
             return None
 
