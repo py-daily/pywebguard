@@ -126,6 +126,7 @@ class RateLimiter(BaseLimiter):
         config = self.config
         matched_pattern = None
         if path is not None:
+
             # Check for exact match first
             if path in self.route_configs:
                 config = self.route_configs[path]
@@ -140,7 +141,10 @@ class RateLimiter(BaseLimiter):
 
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
-
+        if path is not None and any(
+            self._match_route_pattern(p, path) for p in self.config.excluded_paths or []
+        ):
+            return {"allowed": True, "remaining": -1, "reset": -1}
         current_time = int(time.time())
         current_minute = current_time // 60  # Use minute-based window
 
@@ -337,6 +341,10 @@ class AsyncRateLimiter(AsyncBaseLimiter):
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
 
+        if path is not None and any(
+            self._match_route_pattern(p, path) for p in self.config.excluded_paths or []
+        ):
+            return {"allowed": True, "remaining": -1, "reset": -1}
         current_time = int(time.time())
         current_minute = current_time // 60  # Use minute-based window
 

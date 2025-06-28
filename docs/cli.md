@@ -158,7 +158,8 @@ The configuration file is a JSON file with the following structure:
     "requests_per_minute": 60,
     "burst_size": 10,
     "auto_ban_threshold": 100,
-    "auto_ban_duration_minutes": 60
+    "auto_ban_duration_minutes": 60,
+    "excluded_paths": ["/ready", "/healthz"]
   },
   "user_agent": {
     "enabled": true,

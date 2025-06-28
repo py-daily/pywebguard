@@ -152,6 +152,7 @@ config = GuardConfig(
         "burst_size": 20,
         "auto_ban_threshold": 200,
         "auto_ban_duration": 3600,  # 1 hour in seconds
+        "excluded_paths": ["/ready", "/healthz"]
     },
     user_agent={
         "enabled": True,

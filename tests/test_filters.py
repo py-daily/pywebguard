@@ -220,6 +220,38 @@ class TestUserAgentFilter:
         assert result["allowed"] is False
         assert result["reason"] == "Blocked user agent: curl"
 
+    def test_excluded_paths_with_wild_cards_are_allowed(
+        self, ua_filter_config: UserAgentConfig
+    ):
+        """Test that requests to excluded paths (including wildcards) are allowed regardless of user agent."""
+        ua_filter_config.excluded_paths = [
+            "/ready",
+            "/healthz",
+            "/ready/*",
+            "/internal/**",
+        ]
+        ua_filter = UserAgentFilter(ua_filter_config, MemoryStorage())
+
+        # Test exact match exclusion
+        result = ua_filter.is_allowed("curl/7.64.1", path="/ready")
+        assert result["allowed"] is True
+        assert result["reason"] == "Path excluded from user-agent filtering"
+
+        # Test single-level wildcard match
+        result = ua_filter.is_allowed("curl/7.64.1", path="/ready/status")
+        assert result["allowed"] is True
+        assert result["reason"] == "Path excluded from user-agent filtering"
+
+        # Test multi-level wildcard match
+        result = ua_filter.is_allowed("curl/7.64.1", path="/internal/api/v1/status")
+        assert result["allowed"] is True
+        assert result["reason"] == "Path excluded from user-agent filtering"
+
+        # Test a blocked user agent on a non-excluded path
+        result = ua_filter.is_allowed("curl/7.64.1", path="/not-safe")
+        assert result["allowed"] is False
+        assert result["reason"] == "Blocked user agent: curl"
+
 
 class TestAsyncUserAgentFilter:
     """Tests for AsyncUserAgentFilter."""
@@ -292,6 +324,65 @@ class TestAsyncUserAgentFilter:
         assert result["allowed"] is True
 
         # Path that is NOT excluded: should block
+        result = await async_ua_filter.is_allowed("curl/7.64.1", path="/api/data")
+        assert result["allowed"] is False
+        assert result["reason"] == "Blocked user agent: curl"
+
+    @pytest.mark.asyncio
+    async def test_is_allowed_with_excluded_paths(
+        self, async_ua_filter: AsyncUserAgentFilter
+    ):
+        """Test async user agent filtering with excluded paths."""
+        async_ua_filter.config.excluded_paths = ["/ready", "/healthz"]
+
+        # Path that is excluded: should be allowed even if agent is blocked
+        result = await async_ua_filter.is_allowed("curl/7.64.1", path="/ready")
+        assert result["allowed"] is True
+
+        # Another excluded path
+        result = await async_ua_filter.is_allowed(
+            "python-requests/2.28.0", path="/healthz"
+        )
+        assert result["allowed"] is True
+
+        # Path that is NOT excluded: should block
+        result = await async_ua_filter.is_allowed("curl/7.64.1", path="/api/data")
+        assert result["allowed"] is False
+        assert result["reason"] == "Blocked user agent: curl"
+
+    @pytest.mark.asyncio
+    async def test_excluded_paths_with_wild_cards_are_allowed(
+        self, async_ua_filter: AsyncUserAgentFilter
+    ):
+        """Test async user agent filtering with excluded paths and wildcard support."""
+        async_ua_filter.config.excluded_paths = [
+            "/ready",
+            "/healthz",
+            "/ready/*",
+            "/internal/**",
+        ]
+
+        # Exact excluded path
+        result = await async_ua_filter.is_allowed("curl/7.64.1", path="/ready")
+        assert result["allowed"] is True
+
+        # Another exact excluded path
+        result = await async_ua_filter.is_allowed(
+            "python-requests/2.28.0", path="/healthz"
+        )
+        assert result["allowed"] is True
+
+        # Single-level wildcard match
+        result = await async_ua_filter.is_allowed("curl/7.64.1", path="/ready/status")
+        assert result["allowed"] is True
+
+        # Multi-level wildcard match
+        result = await async_ua_filter.is_allowed(
+            "curl/7.64.1", path="/internal/api/v1/health"
+        )
+        assert result["allowed"] is True
+
+        # Non-excluded path: should block
         result = await async_ua_filter.is_allowed("curl/7.64.1", path="/api/data")
         assert result["allowed"] is False
         assert result["reason"] == "Blocked user agent: curl"

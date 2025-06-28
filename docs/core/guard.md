@@ -152,7 +152,8 @@ route_rate_limits = [
         "endpoint": "/api/limited",
         "requests_per_minute": 5,
         "burst_size": 2,
-        "auto_ban_threshold": 10
+        "auto_ban_threshold": 10,
+        "excluded_paths": ["/ready", "/healthz"]
     },
     {
         "endpoint": "/api/uploads/*",

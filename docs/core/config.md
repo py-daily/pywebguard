@@ -18,7 +18,7 @@ config = GuardConfig()
 config = GuardConfig(
     ip_filter={"whitelist": ["127.0.0.1"]},
     rate_limit={"requests_per_minute": 100},
-    user_agent={"blocked_agents": ["curl", "wget"], "excluded_paths": ["/ready", "/healthz"]}
+    user_agent={"blocked_agents": ["curl", "wget"], "excluded_paths": ["/ready/*", "/healthz"]}
 )
 ```
 
@@ -84,6 +84,7 @@ rate_limit = RateLimitConfig(
     burst_size=10,
     auto_ban_threshold=100,
     auto_ban_duration_minutes=60
+    excluded_paths: ["/ready", "/healthz"]
 )
 
 # Or as a dictionary
@@ -92,9 +93,13 @@ rate_limit_dict = {
     "requests_per_minute": 60,
     "burst_size": 10,
     "auto_ban_threshold": 100,
-    "auto_ban_duration_minutes": 60
+    "auto_ban_duration_minutes": 60,
+    "excluded_paths": ["/ready/*", "/healthz/**"]
 }
 ```
+The endpoint patterns support wildcards:
+- `*`: Matches a single path segment
+- `**`: Matches any number of path segments
 
 ### Fields
 
@@ -103,6 +108,8 @@ rate_limit_dict = {
 - `burst_size`: Maximum number of requests allowed in burst (default: `10`)
 - `auto_ban_threshold`: Number of violations before auto-ban (default: `100`)
 - `auto_ban_duration_minutes`: Duration of auto-ban in minutes (default: `60`)
+- `excluded_paths` :  List of endpoint paths where user-agent filtering should be bypassed.
+        Useful for allowing monitoring tools to access health check endpoints like '/ready' or '/healthz'. (default: `[]`)
 
 ## User Agent Configuration
 
@@ -122,9 +129,12 @@ user_agent = UserAgentConfig(
 user_agent_dict = {
     "enabled": True,
     "blocked_agents": ["curl", "wget", "python-requests"],
-     "excluded_paths": ["/ready", "/healthz"]
+     "excluded_paths": ["/ready/*", "/healthz/**"]
 }
 ```
+The endpoint patterns support wildcards:
+- `*`: Matches a single path segment
+- `**`: Matches any number of path segments
 
 ### Fields
 
@@ -299,7 +309,8 @@ config = GuardConfig(
         "requests_per_minute": 60,
         "burst_size": 10,
         "auto_ban_threshold": 100,
-        "auto_ban_duration_minutes": 60
+        "auto_ban_duration_minutes": 60,
+        "excluded_paths": ["/ready/*", "/healthz/*"]
     },
     user_agent={
         "enabled": True,

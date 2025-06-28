@@ -21,6 +21,12 @@ class TestRateLimiter:
             burst_size=0,  # Disable burst by default
             auto_ban_threshold=10,
             auto_ban_duration_minutes=60,
+            excluded_paths=[
+                "/ready",
+                "/healthz",
+                "/ready/*",
+                "/internal/**",
+            ],
         )
 
     @pytest.fixture
@@ -203,6 +209,50 @@ class TestRateLimiter:
         result = rate_limiter.check_limit("192.168.1.1")
         assert result["allowed"] is False
 
+    def test_excluded_paths_not_rate_limited(self, rate_limiter: RateLimiter):
+
+        assert rate_limiter._match_route_pattern("/ready", "/ready") is True
+        assert rate_limiter._match_route_pattern("/ready/*", "/ready/") is True
+        assert rate_limiter._match_route_pattern("/ready/*", "/ready/") is True
+        assert (
+            rate_limiter._match_route_pattern("/internal/**", "/internal/some/path")
+            is True
+        )
+        assert rate_limiter._match_route_pattern("/internal/**", "/internal/") is True
+        assert rate_limiter._match_route_pattern("/internal/**", "/internal") is True
+        rate_limiter.config.excluded_paths = [
+            "/ready",
+            "/healthz",
+            "/ready/*",
+            "/internal/**",
+        ]
+        """Test that excluded paths are not rate limited."""
+        # Test excluded path
+        result = rate_limiter.check_limit("192.168.1.1", "/ready")
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = rate_limiter.check_limit("192.168.1.1", "/healthz")
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = rate_limiter.check_limit("192.168.1.1", "/ready/some/path")
+        assert result["allowed"] is True
+        assert result["remaining"] != -1
+        assert result["reset"] != -1
+
+        result = rate_limiter.check_limit("192.168.1.1", "/internal/some/path")
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = rate_limiter.check_limit("192.168.1.1", "/api/data")
+        assert result["allowed"] is True
+        assert result["remaining"] != -1
+        assert result["reset"] != -1
+
 
 class TestAsyncRateLimiter:
     """Tests for AsyncRateLimiter."""
@@ -352,3 +402,59 @@ class TestAsyncRateLimiter:
         # Test that the default route is still allowed
         result = await async_rate_limiter.check_limit("192.168.1.1", "/api/other")
         assert result["allowed"] is True
+
+    @pytest.mark.asyncio
+    async def test_excluded_paths_not_rate_limited(
+        self, async_rate_limiter: AsyncRateLimiter
+    ):
+
+        assert async_rate_limiter._match_route_pattern("/ready", "/ready") is True
+        assert async_rate_limiter._match_route_pattern("/ready/*", "/ready/") is True
+        assert async_rate_limiter._match_route_pattern("/ready/*", "/ready/") is True
+        assert (
+            async_rate_limiter._match_route_pattern(
+                "/internal/**", "/internal/some/path"
+            )
+            is True
+        )
+        assert (
+            async_rate_limiter._match_route_pattern("/internal/**", "/internal/")
+            is True
+        )
+        assert (
+            async_rate_limiter._match_route_pattern("/internal/**", "/internal") is True
+        )
+        async_rate_limiter.config.excluded_paths = [
+            "/ready",
+            "/healthz",
+            "/ready/*",
+            "/internal/**",
+        ]
+        """Test that excluded paths are not rate limited."""
+        # Test excluded path
+        result = await async_rate_limiter.check_limit("192.168.1.1", "/ready")
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = await async_rate_limiter.check_limit("192.168.1.1", "/healthz")
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = await async_rate_limiter.check_limit("192.168.1.1", "/ready/some/path")
+        assert result["allowed"] is True
+        assert result["remaining"] != -1
+        assert result["reset"] != -1
+
+        result = await async_rate_limiter.check_limit(
+            "192.168.1.1", "/internal/some/path"
+        )
+        assert result["allowed"] is True
+        assert result["remaining"] == -1
+        assert result["reset"] == -1
+
+        result = await async_rate_limiter.check_limit("192.168.1.1", "/api/data")
+        assert result["allowed"] is True
+        assert result["remaining"] != -1
+        assert result["reset"] != -1
