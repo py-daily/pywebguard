@@ -139,7 +139,6 @@ class RateLimiter(BaseLimiter):
                         matched_pattern = pattern
                         break
 
-        
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
         if path is not None and any(
@@ -338,10 +337,10 @@ class AsyncRateLimiter(AsyncBaseLimiter):
                         config = route_config
                         matched_pattern = pattern
                         break
-                
+
         if not config.enabled:
             return {"allowed": True, "remaining": -1, "reset": -1}
-        
+
         if path is not None and any(
             self._match_route_pattern(p, path) for p in self.config.excluded_paths or []
         ):

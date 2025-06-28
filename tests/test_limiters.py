@@ -447,7 +447,9 @@ class TestAsyncRateLimiter:
         assert result["remaining"] != -1
         assert result["reset"] != -1
 
-        result = await async_rate_limiter.check_limit("192.168.1.1", "/internal/some/path")
+        result = await async_rate_limiter.check_limit(
+            "192.168.1.1", "/internal/some/path"
+        )
         assert result["allowed"] is True
         assert result["remaining"] == -1
         assert result["reset"] == -1
