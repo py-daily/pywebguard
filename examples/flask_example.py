@@ -13,126 +13,49 @@ including all major features:
 - Storage backend options
 
 To run this example:
-    pip install flask pywebguard
+    pip install flask pywebguard python-dotenv
     python flask_example.py
 """
 
+import logging
+import sys
+import os
+from dotenv import load_dotenv
 from flask import Flask, request, jsonify, Response
 import time
-import logging
 from typing import Dict, List, Optional, Union, Any, Callable
+
+# Load environment variables
+load_dotenv()
+
+# Configure root logger first
+logging.basicConfig(
+    level=logging.DEBUG,
+    format="%(asctime)s - %(name)s - %(levelname)s - %(message)s",
+    stream=sys.stdout,
+    force=True,  # Force reconfiguration of root logger
+)
 
 # Import PyWebGuard components
 from pywebguard import FlaskGuard, GuardConfig, RateLimitConfig
 from pywebguard.storage.memory import MemoryStorage
-
-# Uncomment to use other storage backends
-# from pywebguard.storage.redis import RedisStorage
-# from pywebguard.storage.sqlite import SQLiteStorage
-# from pywebguard.storage.tinydb import TinyDBStorage
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s"
+from pywebguard.core.config import (
+    LoggingConfig,
+    IPFilterConfig,
+    UserAgentConfig,
+    CORSConfig,
+    PenetrationDetectionConfig,
 )
+
+# Uncomment to use Redis storage instead
+# from pywebguard.storage.redis import RedisStorage
+
+# Get logger for this module
 logger = logging.getLogger("pywebguard-example")
+logger.setLevel(logging.DEBUG)
 
 # Create Flask app
 app = Flask(__name__)
-
-# Configure PyWebGuard with detailed settings
-config = GuardConfig(
-    # IP filtering configuration
-    ip_filter={
-        "enabled": True,
-        "whitelist": ["127.0.0.1", "::1", "192.168.1.0/24"],
-        "blacklist": ["10.0.0.1", "172.16.0.0/16"],
-    },
-    # Global rate limiting configuration
-    rate_limit={
-        "enabled": True,
-        "requests_per_minute": 100,
-        "burst_size": 20,
-        "auto_ban_threshold": 200,
-        "auto_ban_duration": 3600,  # 1 hour in seconds
-    },
-    # User agent filtering
-    user_agent={
-        "enabled": True,
-        "blocked_agents": ["curl/7.*", "wget", "Scrapy", "bot", "Bot"],
-    },
-    # CORS configuration
-    cors={
-        "enabled": True,
-        "allow_origins": ["http://localhost:3000", "https://example.com"],
-        "allow_methods": ["GET", "POST", "PUT", "DELETE", "OPTIONS"],
-        "allow_headers": ["Content-Type", "Authorization"],
-        "allow_credentials": True,
-        "max_age": 3600,
-    },
-    # Penetration detection
-    penetration={
-        "enabled": True,
-        "detect_sql_injection": True,
-        "detect_xss": True,
-        "detect_path_traversal": True,
-        "block_suspicious_requests": True,
-    },
-    # Logging configuration
-    logging={
-        "enabled": True,
-        "level": "INFO",
-        "log_blocked_requests": True,
-    },
-)
-
-# Define route-specific rate limits
-route_rate_limits = [
-    {
-        "endpoint": "/api/limited",
-        "requests_per_minute": 5,
-        "burst_size": 2,
-        "auto_ban_threshold": 10,
-        "auto_ban_duration": 1800,  # 30 minutes
-    },
-    {
-        "endpoint": "/api/uploads/*",
-        "requests_per_minute": 10,
-        "burst_size": 5,
-        "auto_ban_duration": 1800,
-    },
-    {
-        "endpoint": "/api/admin/**",
-        "requests_per_minute": 20,
-        "burst_size": 5,
-        "auto_ban_threshold": 50,
-        "auto_ban_duration": 7200,  # 2 hours
-    },
-]
-
-# Initialize storage (in-memory for this example)
-storage = MemoryStorage()
-
-# Uncomment to use other storage backends
-# Redis Storage
-# storage = RedisStorage(
-#     host="localhost",
-#     port=6379,
-#     db=0,
-#     password=None,
-#     prefix="pywebguard:",
-# )
-
-# SQLite Storage
-# storage = SQLiteStorage(
-#     db_path="pywebguard.db",
-#     table_prefix="pywebguard_",
-# )
-
-# TinyDB Storage
-# storage = TinyDBStorage(
-#     db_path="pywebguard.json",
-# )
 
 
 # Custom response handler for blocked requests
@@ -161,50 +84,101 @@ def custom_response_handler(reason: str) -> Response:
     return response
 
 
-# Initialize PyWebGuard with route-specific rate limits
+# Configure PyWebGuard
+config = GuardConfig(
+    ip_filter=IPFilterConfig(
+        enabled=True,
+        whitelist=["127.0.0.1", "::1"],  # Allow localhost
+        blacklist=[],  # No blacklisted IPs
+    ),
+    rate_limit=RateLimitConfig(
+        enabled=True,
+        requests_per_minute=60,  # 60 requests per minute
+        burst_size=10,  # Allow bursts of 10 requests
+        auto_ban_threshold=100,  # Ban after 100 requests
+        auto_ban_duration_minutes=60,  # Ban for 1 hour
+    ),
+    user_agent=UserAgentConfig(
+        enabled=True,
+        blocked_agents=["curl", "wget", "Scrapy"],  # Block common scraping tools
+    ),
+    cors=CORSConfig(
+        enabled=True,
+        allow_origins=["*"],  # Allow all origins for testing
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+    ),
+    penetration=PenetrationDetectionConfig(
+        enabled=True,
+        log_suspicious=True,
+    ),
+    logging=LoggingConfig(
+        enabled=True,
+        log_level="DEBUG",
+    ),
+)
+
+# Configure route-specific rate limits
+route_rate_limits = [
+    {
+        "endpoint": "/api/sensitive",
+        "requests_per_minute": 10,  # More strict rate limit for sensitive endpoint
+        "burst_size": 2,
+        "auto_ban_threshold": 20,
+        "auto_ban_duration": 7200,  # 2 hours
+    }
+]
+
+# Initialize storage
+storage = MemoryStorage()
+
+# Uncomment to use Redis storage instead
+# storage = RedisStorage(
+#     host="localhost",
+#     port=6379,
+#     db=0,
+#     password=None,
+#     prefix="pywebguard:",
+# )
+
+# Initialize PyWebGuard
 guard = FlaskGuard(
     app,
     config=config,
     storage=storage,
     route_rate_limits=route_rate_limits,
-    response_handler=custom_response_handler,
 )
+
+# Print debug info about route configurations
+print("[DEBUG] Route rate limits configuration:")
+for route in route_rate_limits:
+    print(f"  {route['endpoint']}: {route['requests_per_minute']} req/min")
 
 
 # Basic routes
-@app.route("/")
+@app.route("/", methods=["GET"])
 def root():
-    """Root endpoint with default rate limit (100 req/min)"""
-    return jsonify({"message": "Hello World - Default rate limit (100 req/min)"})
+    """Root endpoint with default rate limit"""
+    return jsonify({"message": "Hello World - Default rate limit (60 req/min)"})
 
 
-@app.route("/api/limited")
-def limited_endpoint():
-    """Strictly rate limited endpoint (5 req/min)"""
-    return jsonify({"message": "This endpoint is strictly rate limited (5 req/min)"})
-
-
-@app.route("/api/uploads/files")
-def upload_files():
-    """File upload endpoint with custom rate limit (10 req/min)"""
+@app.route("/api/sensitive", methods=["GET"])
+def sensitive_endpoint():
+    """Sensitive endpoint with stricter rate limit"""
     return jsonify(
-        {"message": "File upload endpoint with custom rate limit (10 req/min)"}
+        {"message": "This is a sensitive endpoint - Rate limit (10 req/min)"}
     )
 
 
-@app.route("/api/admin/dashboard")
-def admin_dashboard():
-    """Admin dashboard with custom rate limit (20 req/min)"""
-    return jsonify({"message": "Admin dashboard with custom rate limit (20 req/min)"})
+@app.route("/api/blocked", methods=["GET"])
+def blocked_endpoint():
+    """This endpoint will be blocked by user agent filter"""
+    return jsonify(
+        {"message": "This endpoint should be blocked for certain user agents"}
+    )
 
 
-@app.route("/api/admin/users/list")
-def admin_users():
-    """Admin users list with custom rate limit (20 req/min)"""
-    return jsonify({"message": "Admin users list with custom rate limit (20 req/min)"})
-
-
-@app.route("/protected")
+@app.route("/protected", methods=["GET"])
 def protected():
     """Protected endpoint with default rate limit"""
     return jsonify(
@@ -216,8 +190,21 @@ def protected():
     )
 
 
+# Example of a path that might trigger penetration detection
+@app.route("/search", methods=["GET"])
+def search():
+    """
+    Search endpoint that might trigger penetration detection if malicious queries are used
+
+    Returns:
+        Search results
+    """
+    q = request.args.get("q", "")
+    return jsonify({"results": f"Search results for: {q}"})
+
+
 # Helper endpoint to check remaining rate limits
-@app.route("/rate-limit-status")
+@app.route("/rate-limit-status", methods=["GET"])
 def rate_limit_status():
     """
     Check rate limit status for a specific path
@@ -243,7 +230,7 @@ def rate_limit_status():
 
 
 # Endpoint to check if an IP is banned
-@app.route("/check-ban-status")
+@app.route("/check-ban-status", methods=["GET"])
 def check_ban_status():
     """
     Check if an IP is banned
@@ -264,7 +251,7 @@ def check_ban_status():
 
 
 # Admin endpoint to get metrics
-@app.route("/admin/metrics")
+@app.route("/admin/metrics", methods=["GET"])
 def get_metrics():
     """
     Get PyWebGuard metrics
@@ -334,20 +321,6 @@ def unban_ip():
             "timestamp": time.time(),
         }
     )
-
-
-# Example of a path that might trigger penetration detection
-@app.route("/search")
-def search():
-    """
-    Search endpoint that might trigger penetration detection if malicious queries are used
-
-    Returns:
-        Search results
-    """
-    # PyWebGuard will check for SQL injection, XSS, etc. in the query parameter
-    q = request.args.get("q", "")
-    return jsonify({"results": f"Search results for: {q}"})
 
 
 if __name__ == "__main__":

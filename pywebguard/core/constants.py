@@ -3,7 +3,7 @@ PENETRATION_DETECTION_SUSPICIOUS_PATTERNS = [
     r"(?i)(?:union\s+select|select\s+.*\s+from|insert\s+into|update\s+.*\s+set|delete\s+from)",
     r"(?i)(?:drop\s+table|alter\s+table|truncate\s+table|exec\s+xp_cmdshell)",
     r"(?i)(?:--\s*$|/\*.*?\*/|;.*?$)",  # SQL comments
-    r'(?i)(?:\'|"|`)\s*(?:or|and)\s*(?:\d+|\w+)\s*=\s*(?:\d+|\w+)',  # SQL boolean injection
+    r'(?i)(?:\'|"|`)?\s*or\s*\'?1\'?\s*=\s*\'?1\'?',  # Classic SQLi: 1' OR '1'='1
     r"(?i)(?:waitfor\s+delay|benchmark\s*\(|sleep\s*\(|pg_sleep\s*\()",  # SQL timing attacks
     # XSS patterns
     r"(?i)(?:<script>|javascript:|onerror=|onload=|eval\(|setTimeout\(|document\.cookie)",

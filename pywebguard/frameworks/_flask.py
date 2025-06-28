@@ -10,6 +10,7 @@ Classes:
 
 from typing import Optional, Callable, Dict, Any, List, Union, cast
 from functools import wraps
+import time
 
 # Check if Flask is installed
 try:
@@ -46,6 +47,7 @@ class FlaskGuard:
         config: Optional[GuardConfig] = None,
         storage: Optional[BaseStorage] = None,
         route_rate_limits: Optional[List[Dict[str, Any]]] = None,
+        custom_response_handler: Optional[Callable] = None,
     ):
         """
         Initialize the Flask extension.
@@ -56,6 +58,7 @@ class FlaskGuard:
             storage: Storage backend for persistent data
             route_rate_limits: List of dictionaries with route-specific rate limits
                 Each dict should have: endpoint, requests_per_minute, burst_size, auto_ban_threshold (optional)
+            custom_response_handler: Optional custom response handler for blocked requests
 
         Raises:
             ImportError: If Flask is not installed
@@ -72,8 +75,39 @@ class FlaskGuard:
         # Inject the Flask-specific request info extractor
         self.guard._extract_request_info = self._extract_request_info
 
+        # Set up default response handler if none provided
+        if custom_response_handler is None:
+            custom_response_handler = self._default_response_handler
+        self.custom_response_handler = custom_response_handler
+
         if app is not None:
             self.init_app(app)
+
+    def _default_response_handler(self, request, reason: str) -> Response:
+        """
+        Default response handler for blocked requests.
+
+        Args:
+            request: The Flask request object
+            reason: The reason the request was blocked
+
+        Returns:
+            A JSON response with details about why the request was blocked
+        """
+        status_code = 429 if "rate limit" in reason.lower() else 403
+
+        return (
+            jsonify(
+                {
+                    "error": "Request blocked",
+                    "reason": reason,
+                    "timestamp": time.time(),
+                    "path": request.path,
+                    "method": request.method,
+                }
+            ),
+            status_code,
+        )
 
     def init_app(self, app: Flask) -> None:
         """
@@ -82,6 +116,8 @@ class FlaskGuard:
         Args:
             app: Flask application
         """
+        # Store the guard instance in the app's config
+        app.config["PYWEBGUARD"] = self
 
         # Register before_request handler
         @app.before_request
@@ -92,20 +128,18 @@ class FlaskGuard:
             Returns:
                 Response object if request is blocked, None otherwise
             """
-            # Check if request should be allowed
-            result = self.guard.check_request(request)
+            # Handle CORS preflight requests
+            if request.method == "OPTIONS" and self.guard.config.cors.enabled:
+                return None
 
-            if not result["allowed"]:
-                # Return error response if request is blocked
-                return (
-                    jsonify(
-                        {
-                            "detail": "Request blocked by security policy",
-                            "reason": result["details"],
-                        }
-                    ),
-                    403,
+            # Use the guard's check_request method to perform all security checks
+            check_result = self.guard.check_request(request)
+
+            if not check_result["allowed"]:
+                response = self.custom_response_handler(
+                    request, check_result["details"]["reason"]
                 )
+                return response
 
             return None
 
@@ -121,12 +155,27 @@ class FlaskGuard:
             Returns:
                 Processed response object
             """
-            # Update metrics based on request and response
-            self.guard.update_metrics(request, response)
+            # Add security headers
+            response.headers["X-Content-Type-Options"] = "nosniff"
+            response.headers["X-Frame-Options"] = "DENY"
+            response.headers["X-XSS-Protection"] = "1; mode=block"
+            response.headers["Referrer-Policy"] = "strict-origin-when-cross-origin"
+            response.headers["Permissions-Policy"] = (
+                "geolocation=(), microphone=(), camera=()"
+            )
 
-            # Add CORS headers if needed
-            if self.guard.cors_handler.config.enabled:
+            # Add CORS headers if enabled
+            if self.guard.config.cors.enabled:
                 self.guard.cors_handler.add_cors_headers(request, response)
+
+            # Log successful request
+            request_info = {
+                "ip": request.remote_addr,
+                "method": request.method,
+                "path": request.path,
+                "user_agent": request.headers.get("user-agent", ""),
+            }
+            self.guard.logger.log_request(request_info, response)
 
             return response
 
