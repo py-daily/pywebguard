@@ -134,7 +134,7 @@ class FlaskGuard:
 
             # Use the guard's check_request method to perform all security checks
             check_result = self.guard.check_request(request)
-            
+
             if not check_result["allowed"]:
                 response = self.custom_response_handler(
                     request, check_result["details"]["reason"]

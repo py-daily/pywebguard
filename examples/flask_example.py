@@ -39,7 +39,13 @@ logging.basicConfig(
 # Import PyWebGuard components
 from pywebguard import FlaskGuard, GuardConfig, RateLimitConfig
 from pywebguard.storage.memory import MemoryStorage
-from pywebguard.core.config import LoggingConfig
+from pywebguard.core.config import (
+    LoggingConfig,
+    IPFilterConfig,
+    UserAgentConfig,
+    CORSConfig,
+    PenetrationDetectionConfig,
+)
 
 # Uncomment to use Redis storage instead
 # from pywebguard.storage.redis import RedisStorage
@@ -80,39 +86,36 @@ def custom_response_handler(reason: str) -> Response:
 
 # Configure PyWebGuard
 config = GuardConfig(
-    ip_filter={
-        "enabled": True,
-        "whitelist": ["127.0.0.1", "::1"],  # Allow localhost
-        "blacklist": [],  # No blacklisted IPs
-    },
-    rate_limit={
-        "enabled": True,
-        "requests_per_minute": 60,  # 60 requests per minute
-        "burst_size": 10,  # Allow bursts of 10 requests
-        "auto_ban_threshold": 100,  # Ban after 100 requests
-        "auto_ban_duration": 3600,  # Ban for 1 hour
-    },
-    user_agent={
-        "enabled": True,
-        "blocked_agents": ["curl", "wget", "Scrapy"],  # Block common scraping tools
-    },
-    cors={
-        "enabled": True,
-        "allow_origins": ["*"],  # Allow all origins for testing
-        "allow_methods": ["*"],  # Allow all methods
-        "allow_headers": ["*"],  # Allow all headers
-    },
-    penetration={
-        "enabled": True,
-        "detect_sql_injection": True,
-        "detect_xss": True,
-        "detect_path_traversal": True,
-    },
-    logging={
-        "enabled": True,
-        "level": "DEBUG",
-        "log_blocked_requests": True,
-    },
+    ip_filter=IPFilterConfig(
+        enabled=True,
+        whitelist=["127.0.0.1", "::1"],  # Allow localhost
+        blacklist=[],  # No blacklisted IPs
+    ),
+    rate_limit=RateLimitConfig(
+        enabled=True,
+        requests_per_minute=60,  # 60 requests per minute
+        burst_size=10,  # Allow bursts of 10 requests
+        auto_ban_threshold=100,  # Ban after 100 requests
+        auto_ban_duration_minutes=60,  # Ban for 1 hour
+    ),
+    user_agent=UserAgentConfig(
+        enabled=True,
+        blocked_agents=["curl", "wget", "Scrapy"],  # Block common scraping tools
+    ),
+    cors=CORSConfig(
+        enabled=True,
+        allow_origins=["*"],  # Allow all origins for testing
+        allow_methods=["*"],  # Allow all methods
+        allow_headers=["*"],  # Allow all headers
+    ),
+    penetration=PenetrationDetectionConfig(
+        enabled=True,
+        log_suspicious=True,
+    ),
+    logging=LoggingConfig(
+        enabled=True,
+        log_level="DEBUG",
+    ),
 )
 
 # Configure route-specific rate limits

@@ -311,14 +311,23 @@ if FLASK_AVAILABLE:
             client = app.test_client()
 
             # Test SQL injection attempt
-            response = client.get("/search?q=1' OR '1'='1", headers={"User-Agent": "Mozilla/5.0"})
+            response = client.get(
+                "/search?q=1' OR '1'='1", headers={"User-Agent": "Mozilla/5.0"}
+            )
             assert response.status_code == 403
-            assert "suspicious query parameter detected" in response.json["reason"].lower()
+            assert (
+                "suspicious query parameter detected" in response.json["reason"].lower()
+            )
 
             # Test XSS attempt
-            response = client.get("/search?q=<script>alert('xss')</script>", headers={"User-Agent": "Mozilla/5.0"})
+            response = client.get(
+                "/search?q=<script>alert('xss')</script>",
+                headers={"User-Agent": "Mozilla/5.0"},
+            )
             assert response.status_code == 403
-            assert "suspicious query parameter detected" in response.json["reason"].lower()
+            assert (
+                "suspicious query parameter detected" in response.json["reason"].lower()
+            )
 
         def test_custom_response_handler(self, flask_app: Flask):
             """Test custom response handler in Flask extension."""
