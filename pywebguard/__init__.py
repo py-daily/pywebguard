@@ -19,7 +19,16 @@ __version__ = "0.1.0"
 
 # Core components (always available)
 from pywebguard.core.base import Guard, AsyncGuard
-from pywebguard.core.config import GuardConfig, RateLimitConfig
+from pywebguard.core.config import (
+    GuardConfig,
+    RateLimitConfig,
+    UserAgentConfig,
+    IPFilterConfig,
+    CORSConfig,
+    PenetrationDetectionConfig,
+    LoggingConfig,
+    StorageConfig,
+)
 from pywebguard.storage.memory import MemoryStorage, AsyncMemoryStorage
 
 # Optional storage backends - imported conditionally to avoid import errors
@@ -60,6 +69,12 @@ __all__ = [
     "AsyncGuard",
     "GuardConfig",
     "RateLimitConfig",
+    "UserAgentConfig",
+    "IPFilterConfig",
+    "CORSConfig",
+    "PenetrationDetectionConfig",
+    "LoggingConfig",
+    "StorageConfig",
     "MemoryStorage",
     "AsyncMemoryStorage",
 ]

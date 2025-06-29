@@ -8,7 +8,7 @@ penetration detection, CORS, logging, and storage.
 
 import os
 from typing import List, Dict, Any, Optional, Union, Set
-from pydantic import BaseModel, Field, field_validator
+from pydantic import BaseModel, Field, field_validator, ValidationInfo
 
 from .constants import PENETRATION_DETECTION_SUSPICIOUS_PATTERNS
 
@@ -299,12 +299,12 @@ class StorageConfig(BaseModel):
         return v.lower()
 
     @field_validator("url")
-    def validate_url(cls, v: Optional[str], values: Dict[str, Any]) -> Optional[str]:
+    def validate_url(cls, v: Optional[str], info: ValidationInfo) -> Optional[str]:
         """Validate storage URL.
 
         Args:
             v: Storage URL to validate
-            values: Other field values
+            info: Validation info containing other field values
 
         Returns:
             Validated storage URL
@@ -312,7 +312,8 @@ class StorageConfig(BaseModel):
         Raises:
             ValueError: If URL is required but not provided
         """
-        storage_type = values.get("type", "memory")
+        # Get the storage type from other fields
+        storage_type = info.data.get("type", "memory") if info.data else "memory"
 
         # Memory storage doesn't need a URL
         if storage_type == "memory":
