@@ -41,6 +41,9 @@ nav:
   - Guides:
       - Using Middleware: guides/middleware.md
       - API Security: guides/api-security.md
+  - Frameworks:
+      - FastAPI: frameworks/fastapi.md
+      - Flask: frameworks/flask.md
   - API Reference:
       - Core Functions: reference/core.md
       - CLI: reference/cli.md
