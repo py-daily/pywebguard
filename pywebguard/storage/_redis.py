@@ -92,6 +92,13 @@ class RedisStorage(BaseStorage):
         This helps prevent connection issues in long-running applications.
         """
         try:
+            # Close the connection pool first to clean up stale connections
+            if hasattr(self.redis, "connection_pool") and self.redis.connection_pool:
+                try:
+                    self.redis.connection_pool.disconnect()
+                except Exception:
+                    pass
+
             # Try to close the existing connection
             self.redis.close()
         except Exception:
@@ -141,7 +148,7 @@ class RedisStorage(BaseStorage):
             try:
                 value = self.redis.get(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -181,7 +188,7 @@ class RedisStorage(BaseStorage):
                 else:
                     self.redis.set(prefixed_key, value)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -202,7 +209,7 @@ class RedisStorage(BaseStorage):
             try:
                 self.redis.delete(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -232,7 +239,7 @@ class RedisStorage(BaseStorage):
                     pipe.expire(prefixed_key, ttl)
                 result = pipe.execute()
                 return result[0]
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -255,7 +262,7 @@ class RedisStorage(BaseStorage):
         for attempt in range(max_retries):
             try:
                 return bool(self.redis.exists(prefixed_key))
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -275,7 +282,7 @@ class RedisStorage(BaseStorage):
                 if keys:
                     self.redis.delete(*keys)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -333,6 +340,13 @@ class AsyncRedisStorage(AsyncBaseStorage):
         This helps prevent connection issues in long-running applications.
         """
         try:
+            # Close the connection pool first to clean up stale connections
+            if hasattr(self.redis, "connection_pool") and self.redis.connection_pool:
+                try:
+                    await self.redis.connection_pool.disconnect()
+                except Exception:
+                    pass
+
             # Try to close the existing connection
             # Try both close() and aclose() methods for compatibility
             if hasattr(self.redis, "aclose"):
@@ -390,7 +404,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
             try:
                 value = await self.redis.get(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -430,7 +444,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                 else:
                     await self.redis.set(prefixed_key, value)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -451,7 +465,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
             try:
                 await self.redis.delete(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -483,7 +497,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                     pipe.expire(prefixed_key, ttl)
                 result = await pipe.execute()
                 return result[0]
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -506,7 +520,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
         for attempt in range(max_retries):
             try:
                 return bool(await self.redis.exists(prefixed_key))
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -526,7 +540,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                 if keys:
                     await self.redis.delete(*keys)
                 break
-            except (ConnectionError, TimeoutError):
+            except (ConnectionError, TimeoutError, AttributeError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
