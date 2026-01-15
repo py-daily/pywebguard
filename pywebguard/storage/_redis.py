@@ -88,32 +88,28 @@ class RedisStorage(BaseStorage):
         """
         Ensure the Redis connection is healthy. Reconnect if necessary.
 
-        This method checks the connection health and reconnects if the connection
-        is stale or broken. This helps prevent connection issues in long-running applications.
+        This method reconnects the Redis client to handle stale or broken connections.
+        This helps prevent connection issues in long-running applications.
         """
         try:
-            # Try to ping the connection
-            self.redis.ping()
-        except (ConnectionError, TimeoutError, AttributeError):
-            # Reconnect if ping fails
-            try:
-                self.redis.close()
-            except Exception:
-                pass  # Ignore errors when closing
+            # Try to close the existing connection
+            self.redis.close()
+        except Exception:
+            pass  # Ignore errors when closing
 
-            # Recreate the connection with the same settings
-            self.redis = redis.from_url(
-                self.url,
-                retry_on_timeout=True,
-                health_check_interval=30,
-                socket_keepalive=True,
-                socket_keepalive_options={
-                    1: 1,
-                    2: 1,
-                    3: 3,
-                },
-                decode_responses=False,
-            )
+        # Recreate the connection with the same settings
+        self.redis = redis.from_url(
+            self.url,
+            retry_on_timeout=True,
+            health_check_interval=30,
+            socket_keepalive=True,
+            socket_keepalive_options={
+                1: 1,
+                2: 1,
+                3: 3,
+            },
+            decode_responses=False,
+        )
 
     def _get_key(self, key: str) -> str:
         """
@@ -333,40 +329,36 @@ class AsyncRedisStorage(AsyncBaseStorage):
         """
         Ensure the Redis connection is healthy. Reconnect if necessary.
 
-        This method checks the connection health and reconnects if the connection
-        is stale or broken. This helps prevent connection issues in long-running applications.
+        This method reconnects the Redis client to handle stale or broken connections.
+        This helps prevent connection issues in long-running applications.
         """
         try:
-            # Try to ping the connection
-            await self.redis.ping()
-        except (ConnectionError, TimeoutError, AttributeError):
-            # Reconnect if ping fails
-            try:
-                # Try both close() and aclose() methods for compatibility
-                if hasattr(self.redis, "aclose"):
-                    await self.redis.aclose()
-                elif hasattr(self.redis, "close"):
-                    close_method = self.redis.close()
-                    if hasattr(close_method, "__await__"):
-                        await close_method
-                    else:
-                        close_method()
-            except Exception:
-                pass  # Ignore errors when closing
+            # Try to close the existing connection
+            # Try both close() and aclose() methods for compatibility
+            if hasattr(self.redis, "aclose"):
+                await self.redis.aclose()
+            elif hasattr(self.redis, "close"):
+                close_method = self.redis.close()
+                if hasattr(close_method, "__await__"):
+                    await close_method
+                else:
+                    close_method()
+        except Exception:
+            pass  # Ignore errors when closing
 
-            # Recreate the connection with the same settings
-            self.redis = redis.asyncio.from_url(
-                self.url,
-                retry_on_timeout=True,
-                health_check_interval=30,
-                socket_keepalive=True,
-                socket_keepalive_options={
-                    1: 1,
-                    2: 1,
-                    3: 3,
-                },
-                decode_responses=False,
-            )
+        # Recreate the connection with the same settings
+        self.redis = redis.asyncio.from_url(
+            self.url,
+            retry_on_timeout=True,
+            health_check_interval=30,
+            socket_keepalive=True,
+            socket_keepalive_options={
+                1: 1,
+                2: 1,
+                3: 3,
+            },
+            decode_responses=False,
+        )
 
     def _get_key(self, key: str) -> str:
         """
