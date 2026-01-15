@@ -16,7 +16,12 @@ from typing import Any, Dict, Optional, Union, List, cast
 try:
     import redis
     import redis.asyncio
-    from redis.exceptions import ConnectionError, TimeoutError
+    from redis.exceptions import (
+        ConnectionError,
+        TimeoutError,
+        RedisError,
+        ConnectionPoolError,
+    )
 
     REDIS_AVAILABLE = True
 except ImportError:
@@ -35,6 +40,12 @@ except ImportError:
         pass
 
     class TimeoutError(Exception):
+        pass
+
+    class RedisError(Exception):
+        pass
+
+    class ConnectionPoolError(Exception):
         pass
 
 
@@ -69,18 +80,29 @@ class RedisStorage(BaseStorage):
             )
 
         # Configure connection pool with health checks and retry logic
-        self.redis = redis.from_url(
-            url,
-            retry_on_timeout=True,
-            health_check_interval=30,  # Check connection health every 30 seconds
-            socket_keepalive=True,
-            socket_keepalive_options={
-                1: 1,  # TCP_KEEPIDLE: start keepalive after 1 second of inactivity
-                2: 1,  # TCP_KEEPINTVL: send keepalive probe every 1 second
-                3: 3,  # TCP_KEEPCNT: send 3 probes before considering connection dead
-            },
-            decode_responses=False,  # Keep bytes for compatibility
-        )
+        # Use try-except to handle systems that don't support socket keepalive options
+        try:
+            self.redis = redis.from_url(
+                url,
+                retry_on_timeout=True,
+                health_check_interval=30,  # Check connection health every 30 seconds
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    1: 1,  # TCP_KEEPIDLE: start keepalive after 1 second of inactivity
+                    2: 1,  # TCP_KEEPINTVL: send keepalive probe every 1 second
+                    3: 3,  # TCP_KEEPCNT: send 3 probes before considering connection dead
+                },
+                decode_responses=False,  # Keep bytes for compatibility
+            )
+        except (OSError, ConnectionError):
+            # Fallback to simpler connection if keepalive options fail
+            self.redis = redis.from_url(
+                url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                decode_responses=False,
+            )
         self.prefix = prefix
         self.url = url
 
@@ -105,18 +127,29 @@ class RedisStorage(BaseStorage):
             pass  # Ignore errors when closing
 
         # Recreate the connection with the same settings
-        self.redis = redis.from_url(
-            self.url,
-            retry_on_timeout=True,
-            health_check_interval=30,
-            socket_keepalive=True,
-            socket_keepalive_options={
-                1: 1,
-                2: 1,
-                3: 3,
-            },
-            decode_responses=False,
-        )
+        # Use try-except to handle systems that don't support socket keepalive options
+        try:
+            self.redis = redis.from_url(
+                self.url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    1: 1,
+                    2: 1,
+                    3: 3,
+                },
+                decode_responses=False,
+            )
+        except (OSError, ConnectionError):
+            # Fallback to simpler connection if keepalive options fail
+            self.redis = redis.from_url(
+                self.url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                decode_responses=False,
+            )
 
     def _get_key(self, key: str) -> str:
         """
@@ -148,7 +181,7 @@ class RedisStorage(BaseStorage):
             try:
                 value = self.redis.get(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -188,7 +221,7 @@ class RedisStorage(BaseStorage):
                 else:
                     self.redis.set(prefixed_key, value)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -209,7 +242,7 @@ class RedisStorage(BaseStorage):
             try:
                 self.redis.delete(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -239,7 +272,7 @@ class RedisStorage(BaseStorage):
                     pipe.expire(prefixed_key, ttl)
                 result = pipe.execute()
                 return result[0]
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -262,7 +295,7 @@ class RedisStorage(BaseStorage):
         for attempt in range(max_retries):
             try:
                 return bool(self.redis.exists(prefixed_key))
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -282,7 +315,7 @@ class RedisStorage(BaseStorage):
                 if keys:
                     self.redis.delete(*keys)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     self._ensure_connection()
                     continue
@@ -317,18 +350,29 @@ class AsyncRedisStorage(AsyncBaseStorage):
             )
 
         # Configure connection pool with health checks and retry logic
-        self.redis = redis.asyncio.from_url(
-            url,
-            retry_on_timeout=True,
-            health_check_interval=30,  # Check connection health every 30 seconds
-            socket_keepalive=True,
-            socket_keepalive_options={
-                1: 1,  # TCP_KEEPIDLE: start keepalive after 1 second of inactivity
-                2: 1,  # TCP_KEEPINTVL: send keepalive probe every 1 second
-                3: 3,  # TCP_KEEPCNT: send 3 probes before considering connection dead
-            },
-            decode_responses=False,  # Keep bytes for compatibility
-        )
+        # Use try-except to handle systems that don't support socket keepalive options
+        try:
+            self.redis = redis.asyncio.from_url(
+                url,
+                retry_on_timeout=True,
+                health_check_interval=30,  # Check connection health every 30 seconds
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    1: 1,  # TCP_KEEPIDLE: start keepalive after 1 second of inactivity
+                    2: 1,  # TCP_KEEPINTVL: send keepalive probe every 1 second
+                    3: 3,  # TCP_KEEPCNT: send 3 probes before considering connection dead
+                },
+                decode_responses=False,  # Keep bytes for compatibility
+            )
+        except (OSError, ConnectionError):
+            # Fallback to simpler connection if keepalive options fail
+            self.redis = redis.asyncio.from_url(
+                url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                decode_responses=False,
+            )
         self.prefix = prefix
         self.url = url
 
@@ -361,18 +405,29 @@ class AsyncRedisStorage(AsyncBaseStorage):
             pass  # Ignore errors when closing
 
         # Recreate the connection with the same settings
-        self.redis = redis.asyncio.from_url(
-            self.url,
-            retry_on_timeout=True,
-            health_check_interval=30,
-            socket_keepalive=True,
-            socket_keepalive_options={
-                1: 1,
-                2: 1,
-                3: 3,
-            },
-            decode_responses=False,
-        )
+        # Use try-except to handle systems that don't support socket keepalive options
+        try:
+            self.redis = redis.asyncio.from_url(
+                self.url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                socket_keepalive_options={
+                    1: 1,
+                    2: 1,
+                    3: 3,
+                },
+                decode_responses=False,
+            )
+        except (OSError, ConnectionError):
+            # Fallback to simpler connection if keepalive options fail
+            self.redis = redis.asyncio.from_url(
+                self.url,
+                retry_on_timeout=True,
+                health_check_interval=30,
+                socket_keepalive=True,
+                decode_responses=False,
+            )
 
     def _get_key(self, key: str) -> str:
         """
@@ -404,7 +459,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
             try:
                 value = await self.redis.get(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -444,7 +499,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                 else:
                     await self.redis.set(prefixed_key, value)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -465,7 +520,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
             try:
                 await self.redis.delete(prefixed_key)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -497,7 +552,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                     pipe.expire(prefixed_key, ttl)
                 result = await pipe.execute()
                 return result[0]
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -520,7 +575,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
         for attempt in range(max_retries):
             try:
                 return bool(await self.redis.exists(prefixed_key))
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
@@ -540,7 +595,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
                 if keys:
                     await self.redis.delete(*keys)
                 break
-            except (ConnectionError, TimeoutError, AttributeError):
+            except (ConnectionError, TimeoutError, AttributeError, RedisError, OSError):
                 if attempt < max_retries - 1:
                     await self._ensure_connection()
                     continue
