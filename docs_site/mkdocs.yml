@@ -1,0 +1,73 @@
+site_name: PyWebGuard
+site_description: Secure your Python web apps with PyWebGuard.
+site_url: https://py-daily.github.io/pywebguard/
+repo_url: https://github.com/py-daily/pywebguard
+repo_name: py-daily/pywebguard
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - navigation.expand
+    - navigation.footer
+    - navigation.instant
+    - navigation.indexes
+    - search.highlight
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+  social:
+    - icon: fontawesome/brands/github
+      link: https://github.com/py-daily/pywebguard
+    - icon: fontawesome/brands/python
+      link: https://pypi.org/project/pywebguard/
+
+nav:
+  - Home: index.md
+  - Getting Started:
+      - Installation: getting-started/installation.md
+      - Configuration: getting-started/configuration.md
+  - Guides:
+      - Using Middleware: guides/middleware.md
+      - API Security: guides/api-security.md
+  - Frameworks:
+      - FastAPI: frameworks/fastapi.md
+      - Flask: frameworks/flask.md
+  - API Reference:
+      - Core Functions: reference/core.md
+      - CLI: reference/cli.md
+  - Contributing: contributing.md
+  - Changelog: changelog.md
+
+markdown_extensions:
+  - admonition
+  - codehilite
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search
+  - git-revision-date-localized:
+      type: datetime
+      locale: en
+  - minify:
+      minify_html: true
+  - redirects:
+      redirect_maps:
+        'old-page.md': 'new-page.md'
