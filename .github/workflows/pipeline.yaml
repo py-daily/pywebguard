@@ -150,7 +150,7 @@ jobs:
 
       - name: Create Release
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: softprops/action-gh-release@v1
+        uses: softprops/action-gh-release@v3
         with:
           name: Release ${{ steps.bump.outputs.tag }}
           tag_name: ${{ steps.bump.outputs.tag }}
