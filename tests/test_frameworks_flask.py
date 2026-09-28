@@ -25,7 +25,6 @@ from pywebguard.core.config import (
 )
 from pywebguard.storage.memory import MemoryStorage
 
-
 # Only run Flask tests if Flask is available
 if FLASK_AVAILABLE:
 

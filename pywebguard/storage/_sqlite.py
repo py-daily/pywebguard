@@ -47,15 +47,13 @@ class SQLiteStorage(BaseStorage):
         with sqlite3.connect(
             self.db_path, check_same_thread=self.check_same_thread
         ) as conn:
-            conn.execute(
-                f"""
+            conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
                     key TEXT PRIMARY KEY,
                     value TEXT,
                     expiry REAL
                 )
-            """
-            )
+            """)
             conn.commit()
 
     def _clean_expired(self) -> None:
@@ -225,15 +223,13 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         async with aiosqlite.connect(
             self.db_path, check_same_thread=self.check_same_thread
         ) as db:
-            await db.execute(
-                f"""
+            await db.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
                     key TEXT PRIMARY KEY,
                     value TEXT,
                     expiry REAL
                 )
-            """
-            )
+            """)
             await db.commit()
 
     async def _clean_expired(self) -> None:

@@ -87,8 +87,7 @@ class PostgreSQLStorage(BaseStorage):
     def _create_table(self) -> None:
         """Create the storage table if it doesn't exist."""
         with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
+            cur.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
                     key TEXT PRIMARY KEY,
                     value JSONB NOT NULL,
@@ -96,28 +95,23 @@ class PostgreSQLStorage(BaseStorage):
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
-            """
-            )
+            """)
 
             # Create index on expires_at for TTL cleanup
-            cur.execute(
-                f"""
+            cur.execute(f"""
                 CREATE INDEX IF NOT EXISTS {self.table_name}_expires_at_idx
                 ON {self.table_name} (expires_at)
-            """
-            )
+            """)
 
             self.conn.commit()
 
     def _cleanup_expired(self) -> None:
         """Clean up expired entries."""
         with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
+            cur.execute(f"""
                 DELETE FROM {self.table_name}
                 WHERE expires_at IS NOT NULL AND expires_at < NOW()
-            """
-            )
+            """)
             self.conn.commit()
 
     def get(self, key: str) -> Any:
@@ -269,11 +263,9 @@ class PostgreSQLStorage(BaseStorage):
     def clear(self) -> None:
         """Clear all data from storage."""
         with self.conn.cursor() as cur:
-            cur.execute(
-                f"""
+            cur.execute(f"""
                 TRUNCATE TABLE {self.table_name}
-            """
-            )
+            """)
 
             self.conn.commit()
 
@@ -341,8 +333,7 @@ class AsyncPostgreSQLStorage(AsyncBaseStorage):
         pool = await self._get_pool()
         async with pool.acquire() as conn:
             # Create table if it doesn't exist
-            await conn.execute(
-                f"""
+            await conn.execute(f"""
                 CREATE TABLE IF NOT EXISTS {self.table_name} (
                     key TEXT PRIMARY KEY,
                     value JSONB NOT NULL,
@@ -350,16 +341,13 @@ class AsyncPostgreSQLStorage(AsyncBaseStorage):
                     created_at TIMESTAMP WITH TIME ZONE DEFAULT NOW(),
                     updated_at TIMESTAMP WITH TIME ZONE DEFAULT NOW()
                 )
-            """
-            )
+            """)
 
             # Create index on expires_at for TTL cleanup
-            await conn.execute(
-                f"""
+            await conn.execute(f"""
                 CREATE INDEX IF NOT EXISTS {self.table_name}_expires_at_idx
                 ON {self.table_name} (expires_at)
-            """
-            )
+            """)
 
             self._initialized = True
 
@@ -367,12 +355,10 @@ class AsyncPostgreSQLStorage(AsyncBaseStorage):
         """Clean up expired entries asynchronously."""
         pool = await self._get_pool()
         async with pool.acquire() as conn:
-            await conn.execute(
-                f"""
+            await conn.execute(f"""
                 DELETE FROM {self.table_name}
                 WHERE expires_at IS NOT NULL AND expires_at < NOW()
-            """
-            )
+            """)
 
     async def get(self, key: str) -> Any:
         """
@@ -526,11 +512,9 @@ class AsyncPostgreSQLStorage(AsyncBaseStorage):
 
         pool = await self._get_pool()
         async with pool.acquire() as conn:
-            await conn.execute(
-                f"""
+            await conn.execute(f"""
                 TRUNCATE TABLE {self.table_name}
-            """
-            )
+            """)
 
     async def close(self) -> None:
         """Close the PostgreSQL connection pool asynchronously."""
