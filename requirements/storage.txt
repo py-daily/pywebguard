@@ -1,7 +1,7 @@
 # Redis storage
 redis>=4.0.0
 aioredis>=2.0.0
-sqlalchemy>=2.0.0
+sqlalchemy>=2.0.54
 pymongo
 aiosqlite
 tinydb>=4.0.0
