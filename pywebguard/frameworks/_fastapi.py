@@ -164,6 +164,25 @@ class FastAPIGuard(BaseHTTPMiddleware):
             )
             return response
 
+        # Check IP filter (whitelist/blacklist)
+        if self.guard.config.ip_filter.enabled:
+            ip_check = await self.guard.ip_filter.is_allowed(client_ip)
+            if not ip_check["allowed"]:
+                response = await self.custom_response_handler(
+                    request, ip_check["reason"]
+                )
+                # Log blocked request
+                request_info = {
+                    "ip": client_ip,
+                    "method": request.method,
+                    "path": request.url.path,
+                    "user_agent": user_agent,
+                }
+                await self.guard.logger.log_blocked_request(
+                    request_info, "ip_filter", ip_check["reason"]
+                )
+                return response
+
         # Check user agent
         if self.guard.config.user_agent.enabled:
             user_agent_check = await self.guard.user_agent_filter.is_allowed(

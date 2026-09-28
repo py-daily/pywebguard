@@ -173,13 +173,34 @@ class TestFastAPIGuard:
     @pytest.fixture
     def client(self, fastapi_app: FastAPI) -> TestClient:
         """Create a test client for the FastAPI app."""
-        return TestClient(fastapi_app)
+        # Use a real, whitelisted IP: TestClient's default "testclient" host
+        # isn't a parseable IP address, and ip_filter is enabled by default.
+        return TestClient(fastapi_app, client=("127.0.0.1", 12345))
 
     def test_allowed_request(self, client: TestClient):
         """Test that allowed requests pass through."""
         response = client.get("/")
         assert response.status_code == 200
         assert response.json() == {"message": "Hello World"}
+
+    def test_blacklisted_ip_is_blocked(self, fastapi_app: FastAPI):
+        """A request from a blacklisted IP must be blocked (403), not silently allowed.
+
+        Regression test: FastAPIGuard.dispatch() previously never checked
+        self.guard.ip_filter at all, so blacklist/whitelist enforcement was a
+        no-op for every FastAPI user despite basic_config() above configuring
+        blacklist=["10.0.0.1"].
+        """
+        client = TestClient(fastapi_app, client=("10.0.0.1", 12345))
+        response = client.get("/")
+        assert response.status_code == 403
+        assert "blacklist" in response.json()["reason"].lower()
+
+    def test_whitelisted_ip_is_allowed(self, fastapi_app: FastAPI):
+        """A request from a whitelisted IP should still pass through normally."""
+        client = TestClient(fastapi_app, client=("127.0.0.1", 12345))
+        response = client.get("/")
+        assert response.status_code == 200
 
     @pytest.mark.asyncio
     async def test_rate_limiting(self, storage: AsyncRedisStorage):
@@ -205,7 +226,7 @@ class TestFastAPIGuard:
         async def root():
             return {"message": "Hello World"}
 
-        client = TestClient(app)
+        client = TestClient(app, client=("127.0.0.1", 12345))
         headers = {"X-Forwarded-For": "127.0.0.1"}
 
         # First request should succeed
@@ -254,7 +275,7 @@ class TestFastAPIGuard:
         async def limited():
             return {"message": "Limited Route"}
 
-        client = TestClient(app)
+        client = TestClient(app, client=("127.0.0.1", 12345))
         headers = {"X-Forwarded-For": "127.0.0.1"}
 
         # First request to limited route should succeed
@@ -299,7 +320,9 @@ async def async_app():
 @pytest.fixture
 def async_client(async_app: FastAPI) -> TestClient:
     """Create a test client for the async FastAPI app."""
-    return TestClient(async_app)
+    # Real, valid IP: ip_filter is enabled by default and TestClient's default
+    # "testclient" host isn't a parseable IP address.
+    return TestClient(async_app, client=("127.0.0.1", 12345))
 
 
 @pytest.mark.asyncio
