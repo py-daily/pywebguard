@@ -1,5 +1,5 @@
 # Redis storage
-redis>=4.0.0
+redis>=8.1.0
 aioredis>=2.0.0
 sqlalchemy>=2.0.0
 pymongo
