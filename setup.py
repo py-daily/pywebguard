@@ -2,7 +2,6 @@ import io
 from os import path, getenv
 from setuptools import setup, find_packages
 
-
 VERSION = getenv("VERSION", "1.0.0")  # package version
 if "v" in VERSION:
     VERSION = VERSION[1:]
@@ -83,7 +82,7 @@ setup(
             "pytest>=7.0.0",
             "pytest-cov>=6.1.1",
             "pytest-asyncio>=0.26.0",
-            "black>=25.1.0",
+            "black==26.5.1",
             "isort>=6.0.1",
             "mypy>=1.15.0",
             "flake8>=7.2.0",
