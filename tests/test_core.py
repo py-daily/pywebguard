@@ -373,11 +373,15 @@ async def test_async_guard_auto_creates_redis_storage():
     assert guard.storage.ttl == 120
 
 
-def test_guard_auto_creates_sqlite_storage():
+def test_guard_auto_creates_sqlite_storage(tmp_path):
     """Guard() with storage.type='sqlite' should build a working SQLiteStorage."""
+    # A real file (rather than ":memory:") is required here: SQLiteStorage opens
+    # a new connection per operation, and ":memory:" gives each connection its
+    # own independent, empty database.
+    db_path = str(tmp_path / "guard_auto_creation.db")
     config = GuardConfig(
         storage=StorageConfig(
-            type="sqlite", url=":memory:", table_name="custom_table", ttl=120
+            type="sqlite", url=db_path, table_name="custom_table", ttl=120
         )
     )
     guard = Guard(config=config)
@@ -393,11 +397,12 @@ def test_guard_auto_creates_sqlite_storage():
 
 @pytest.mark.skipif(not AIOSQLITE_AVAILABLE, reason="aiosqlite is not installed")
 @pytest.mark.asyncio
-async def test_async_guard_auto_creates_sqlite_storage():
+async def test_async_guard_auto_creates_sqlite_storage(tmp_path):
     """AsyncGuard() with storage.type='sqlite' should build a working AsyncSQLiteStorage."""
+    db_path = str(tmp_path / "guard_auto_creation_async.db")
     config = GuardConfig(
         storage=StorageConfig(
-            type="sqlite", url=":memory:", table_name="custom_table", ttl=120
+            type="sqlite", url=db_path, table_name="custom_table", ttl=120
         )
     )
     guard = AsyncGuard(config=config)
