@@ -12,7 +12,12 @@ app = FastAPI(
 config = GuardConfig(
     ip_filter={
         "enabled": True,
-        "whitelist": ["127.0.0.1", "::1"],
+        # Docker's published-port NAT (docker-proxy) makes requests from the host
+        # arrive with the bridge network's gateway address (commonly in
+        # 172.16.0.0/12) as the client IP rather than 127.0.0.1, so the
+        # whitelist has to cover that range for this demo to be reachable
+        # when run in a container.
+        "whitelist": ["127.0.0.1", "::1", "172.16.0.0/12"],
     },
     rate_limit={
         "enabled": True,
