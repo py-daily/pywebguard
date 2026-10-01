@@ -219,7 +219,7 @@ class Guard:
                 )
             return SQLiteStorage(
                 db_path=self.config.storage.url or "pywebguard.db",
-                table_prefix=self.config.storage.prefix,
+                table_name=self.config.storage.table_name,
                 ttl=self.config.storage.ttl,
             )
 
@@ -230,6 +230,7 @@ class Guard:
                 )
             return TinyDBStorage(
                 db_path=self.config.storage.url or "pywebguard.json",
+                table_name=self.config.storage.table_name,
                 ttl=self.config.storage.ttl,
             )
 
@@ -551,7 +552,7 @@ class AsyncGuard:
                 )
             return AsyncSQLiteStorage(
                 db_path=self.config.storage.url or "pywebguard.db",
-                table_prefix=self.config.storage.prefix,
+                table_name=self.config.storage.table_name,
                 ttl=self.config.storage.ttl,
             )
 
@@ -562,6 +563,7 @@ class AsyncGuard:
                 )
             return AsyncTinyDBStorage(
                 db_path=self.config.storage.url or "pywebguard.json",
+                table_name=self.config.storage.table_name,
                 ttl=self.config.storage.ttl,
             )
 

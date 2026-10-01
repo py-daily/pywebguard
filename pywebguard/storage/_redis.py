@@ -43,7 +43,10 @@ class RedisStorage(BaseStorage):
     """
 
     def __init__(
-        self, url: str = "redis://localhost:6379/0", prefix: str = "pywebguard:"
+        self,
+        url: str = "redis://localhost:6379/0",
+        prefix: str = "pywebguard:",
+        ttl: int = 3600,
     ):
         """
         Initialize the Redis storage.
@@ -51,6 +54,8 @@ class RedisStorage(BaseStorage):
         Args:
             url: Redis connection URL
             prefix: Key prefix for all stored values
+            ttl: Default TTL for stored data in seconds, used when `set`/`increment`
+                are called without an explicit `ttl`
 
         Raises:
             ImportError: If Redis is not installed
@@ -87,6 +92,7 @@ class RedisStorage(BaseStorage):
             )
         self.prefix = prefix
         self.url = url
+        self.ttl = ttl
 
     def _get_key(self, key: str) -> str:
         """
@@ -99,6 +105,22 @@ class RedisStorage(BaseStorage):
             The prefixed key
         """
         return f"{self.prefix}{key}"
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set`/`increment` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     def get(self, key: str) -> Optional[Any]:
         """
@@ -130,7 +152,7 @@ class RedisStorage(BaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         prefixed_key = self._get_key(key)
 
@@ -138,8 +160,9 @@ class RedisStorage(BaseStorage):
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        if ttl is not None:
-            self.redis.setex(prefixed_key, ttl, value)
+        effective_ttl = self._resolve_ttl(ttl)
+        if effective_ttl is not None:
+            self.redis.setex(prefixed_key, effective_ttl, value)
         else:
             self.redis.set(prefixed_key, value)
 
@@ -160,7 +183,7 @@ class RedisStorage(BaseStorage):
         Args:
             key: The key to increment
             amount: The amount to increment by
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
 
         Returns:
             The new value
@@ -168,8 +191,9 @@ class RedisStorage(BaseStorage):
         prefixed_key = self._get_key(key)
         pipe = self.redis.pipeline()
         pipe.incrby(prefixed_key, amount)
-        if ttl is not None:
-            pipe.expire(prefixed_key, ttl)
+        effective_ttl = self._resolve_ttl(ttl)
+        if effective_ttl is not None:
+            pipe.expire(prefixed_key, effective_ttl)
         result = pipe.execute()
         return result[0]
 
@@ -206,7 +230,10 @@ class AsyncRedisStorage(AsyncBaseStorage):
     """
 
     def __init__(
-        self, url: str = "redis://localhost:6379/0", prefix: str = "pywebguard:"
+        self,
+        url: str = "redis://localhost:6379/0",
+        prefix: str = "pywebguard:",
+        ttl: int = 3600,
     ):
         """
         Initialize the async Redis storage.
@@ -214,6 +241,8 @@ class AsyncRedisStorage(AsyncBaseStorage):
         Args:
             url: Redis connection URL
             prefix: Key prefix for all stored values
+            ttl: Default TTL for stored data in seconds, used when `set`/`increment`
+                are called without an explicit `ttl`
 
         Raises:
             ImportError: If Redis is not installed
@@ -226,6 +255,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
 
         self.redis = redis.asyncio.from_url(url)
         self.prefix = prefix
+        self.ttl = ttl
 
     def _get_key(self, key: str) -> str:
         """
@@ -238,6 +268,22 @@ class AsyncRedisStorage(AsyncBaseStorage):
             The prefixed key
         """
         return f"{self.prefix}{key}"
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set`/`increment` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     async def get(self, key: str) -> Optional[Any]:
         """
@@ -269,7 +315,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         prefixed_key = self._get_key(key)
 
@@ -277,8 +323,9 @@ class AsyncRedisStorage(AsyncBaseStorage):
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        if ttl is not None:
-            await self.redis.setex(prefixed_key, ttl, value)
+        effective_ttl = self._resolve_ttl(ttl)
+        if effective_ttl is not None:
+            await self.redis.setex(prefixed_key, effective_ttl, value)
         else:
             await self.redis.set(prefixed_key, value)
 
@@ -301,7 +348,7 @@ class AsyncRedisStorage(AsyncBaseStorage):
         Args:
             key: The key to increment
             amount: The amount to increment by
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
 
         Returns:
             The new value
@@ -309,8 +356,9 @@ class AsyncRedisStorage(AsyncBaseStorage):
         prefixed_key = self._get_key(key)
         pipe = self.redis.pipeline()
         pipe.incrby(prefixed_key, amount)
-        if ttl is not None:
-            pipe.expire(prefixed_key, ttl)
+        effective_ttl = self._resolve_ttl(ttl)
+        if effective_ttl is not None:
+            pipe.expire(prefixed_key, effective_ttl)
         result = await pipe.execute()
         return result[0]
 
