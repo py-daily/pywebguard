@@ -36,13 +36,20 @@ class TinyDBStorage(BaseStorage):
     TinyDB storage backend (synchronous).
     """
 
-    def __init__(self, db_path: str = "pywebguard.json", table_name: str = "default"):
+    def __init__(
+        self,
+        db_path: str = "pywebguard.json",
+        table_name: str = "default",
+        ttl: int = 3600,
+    ):
         """
         Initialize the TinyDB storage.
 
         Args:
             db_path: Path to TinyDB JSON file
             table_name: Name of the table to store values
+            ttl: Default TTL for stored data in seconds, used when `set` is called
+                without an explicit `ttl`
         """
         if not TINYDB_AVAILABLE:
             raise ImportError(
@@ -52,7 +59,24 @@ class TinyDBStorage(BaseStorage):
 
         self.db = TinyDB(db_path, storage=CachingMiddleware(JSONStorage))
         self.table = self.db.table(table_name)
+        self.ttl = ttl
         self._clean_expired()
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
@@ -90,13 +114,14 @@ class TinyDBStorage(BaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         # Convert complex types to JSON
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        expiry = time.time() + ttl if ttl is not None else None
+        effective_ttl = self._resolve_ttl(ttl)
+        expiry = time.time() + effective_ttl if effective_ttl is not None else None
 
         # Remove existing entry if it exists
         self.table.remove(Query().key == key)
@@ -158,13 +183,20 @@ class AsyncTinyDBStorage(AsyncBaseStorage):
     TinyDB operations in a thread pool to make them non-blocking.
     """
 
-    def __init__(self, db_path: str = "pywebguard.json", table_name: str = "default"):
+    def __init__(
+        self,
+        db_path: str = "pywebguard.json",
+        table_name: str = "default",
+        ttl: int = 3600,
+    ):
         """
         Initialize the async TinyDB storage.
 
         Args:
             db_path: Path to TinyDB JSON file
             table_name: Name of the table to store values
+            ttl: Default TTL for stored data in seconds, used when `set` is called
+                without an explicit `ttl`
         """
         if not TINYDB_AVAILABLE:
             raise ImportError(
@@ -174,6 +206,23 @@ class AsyncTinyDBStorage(AsyncBaseStorage):
 
         self.db = TinyDB(db_path, storage=CachingMiddleware(JSONStorage))
         self.table = self.db.table(table_name)
+        self.ttl = ttl
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     async def _clean_expired(self) -> None:
         """Remove expired entries from storage."""
@@ -211,13 +260,14 @@ class AsyncTinyDBStorage(AsyncBaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         # Convert complex types to JSON
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        expiry = time.time() + ttl if ttl is not None else None
+        effective_ttl = self._resolve_ttl(ttl)
+        expiry = time.time() + effective_ttl if effective_ttl is not None else None
 
         # Remove existing entry if it exists
         self.table.remove(Query().key == key)

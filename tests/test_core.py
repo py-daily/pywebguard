@@ -3,6 +3,7 @@
 import pytest
 from datetime import datetime
 from typing import Dict, Any, cast
+from unittest.mock import MagicMock, patch
 
 from pywebguard.core.base import Guard, AsyncGuard
 from pywebguard.core.config import (
@@ -10,6 +11,28 @@ from pywebguard.core.config import (
     IPFilterConfig,
     RateLimitConfig,
     StorageConfig,
+)
+from pywebguard.storage._redis import REDIS_AVAILABLE, RedisStorage, AsyncRedisStorage
+from pywebguard.storage._sqlite import (
+    AIOSQLITE_AVAILABLE,
+    SQLiteStorage,
+    AsyncSQLiteStorage,
+)
+from pywebguard.storage._tinydb import (
+    TINYDB_AVAILABLE,
+    TinyDBStorage,
+    AsyncTinyDBStorage,
+)
+from pywebguard.storage._mongodb import (
+    MONGODB_AVAILABLE,
+    MongoDBStorage,
+    AsyncMongoDBStorage,
+)
+from pywebguard.storage._postgresql import (
+    PSYCOPG2_AVAILABLE,
+    ASYNCPG_AVAILABLE,
+    PostgreSQLStorage,
+    AsyncPostgreSQLStorage,
 )
 from tests.conftest import MockRequest, MockResponse
 
@@ -302,3 +325,223 @@ def test_extract_request_info(guard: Guard, mock_request: MockRequest):
     assert request_info["user_agent"] == "Mozilla/5.0"
     assert request_info["method"] == "GET"
     assert request_info["path"] == "/"
+
+
+# Regression tests for issue #21: Guard/AsyncGuard auto-storage-creation used to
+# crash with TypeError for redis/sqlite/tinydb because it passed constructor
+# kwargs those storage classes didn't accept.
+
+
+@pytest.mark.skipif(not REDIS_AVAILABLE, reason="redis is not installed")
+def test_guard_auto_creates_redis_storage():
+    """Guard() with storage.type='redis' should build a working RedisStorage."""
+    with patch("pywebguard.storage._redis.redis.from_url") as mock_from_url:
+        mock_from_url.return_value = MagicMock()
+        config = GuardConfig(
+            storage=StorageConfig(
+                type="redis",
+                url="redis://localhost:6379/0",
+                prefix="test-prefix:",
+                ttl=120,
+            )
+        )
+        guard = Guard(config=config)
+
+    assert isinstance(guard.storage, RedisStorage)
+    assert guard.storage.prefix == "test-prefix:"
+    assert guard.storage.ttl == 120
+
+
+@pytest.mark.skipif(not REDIS_AVAILABLE, reason="redis is not installed")
+@pytest.mark.asyncio
+async def test_async_guard_auto_creates_redis_storage():
+    """AsyncGuard() with storage.type='redis' should build a working AsyncRedisStorage."""
+    with patch("pywebguard.storage._redis.redis.asyncio.from_url") as mock_from_url:
+        mock_from_url.return_value = MagicMock()
+        config = GuardConfig(
+            storage=StorageConfig(
+                type="redis",
+                url="redis://localhost:6379/0",
+                prefix="test-prefix:",
+                ttl=120,
+            )
+        )
+        guard = AsyncGuard(config=config)
+
+    assert isinstance(guard.storage, AsyncRedisStorage)
+    assert guard.storage.prefix == "test-prefix:"
+    assert guard.storage.ttl == 120
+
+
+def test_guard_auto_creates_sqlite_storage(tmp_path):
+    """Guard() with storage.type='sqlite' should build a working SQLiteStorage."""
+    # A real file (rather than ":memory:") is required here: SQLiteStorage opens
+    # a new connection per operation, and ":memory:" gives each connection its
+    # own independent, empty database.
+    db_path = str(tmp_path / "guard_auto_creation.db")
+    config = GuardConfig(
+        storage=StorageConfig(
+            type="sqlite", url=db_path, table_name="custom_table", ttl=120
+        )
+    )
+    guard = Guard(config=config)
+
+    assert isinstance(guard.storage, SQLiteStorage)
+    assert guard.storage.table_name == "custom_table"
+    assert guard.storage.ttl == 120
+
+    # Verify the storage actually works end-to-end
+    guard.storage.set("auto_creation_key", "auto_creation_value")
+    assert guard.storage.get("auto_creation_key") == "auto_creation_value"
+
+
+@pytest.mark.skipif(not AIOSQLITE_AVAILABLE, reason="aiosqlite is not installed")
+@pytest.mark.asyncio
+async def test_async_guard_auto_creates_sqlite_storage(tmp_path):
+    """AsyncGuard() with storage.type='sqlite' should build a working AsyncSQLiteStorage."""
+    db_path = str(tmp_path / "guard_auto_creation_async.db")
+    config = GuardConfig(
+        storage=StorageConfig(
+            type="sqlite", url=db_path, table_name="custom_table", ttl=120
+        )
+    )
+    guard = AsyncGuard(config=config)
+
+    assert isinstance(guard.storage, AsyncSQLiteStorage)
+    assert guard.storage.table_name == "custom_table"
+    assert guard.storage.ttl == 120
+
+    # Verify the storage actually works end-to-end
+    await guard.storage.set("auto_creation_key", "auto_creation_value")
+    assert await guard.storage.get("auto_creation_key") == "auto_creation_value"
+
+
+@pytest.mark.skipif(not TINYDB_AVAILABLE, reason="tinydb is not installed")
+def test_guard_auto_creates_tinydb_storage(tmp_path):
+    """Guard() with storage.type='tinydb' should build a working TinyDBStorage."""
+    db_path = str(tmp_path / "guard_auto_creation.json")
+    config = GuardConfig(
+        storage=StorageConfig(
+            type="tinydb", url=db_path, table_name="custom_table", ttl=120
+        )
+    )
+    guard = Guard(config=config)
+    try:
+        assert isinstance(guard.storage, TinyDBStorage)
+        assert guard.storage.ttl == 120
+
+        # Verify the storage actually works end-to-end
+        guard.storage.set("auto_creation_key", "auto_creation_value")
+        assert guard.storage.get("auto_creation_key") == "auto_creation_value"
+    finally:
+        guard.storage.db.close()
+
+
+@pytest.mark.skipif(not TINYDB_AVAILABLE, reason="tinydb is not installed")
+@pytest.mark.asyncio
+async def test_async_guard_auto_creates_tinydb_storage(tmp_path):
+    """AsyncGuard() with storage.type='tinydb' should build a working AsyncTinyDBStorage."""
+    db_path = str(tmp_path / "guard_auto_creation_async.json")
+    config = GuardConfig(
+        storage=StorageConfig(
+            type="tinydb", url=db_path, table_name="custom_table", ttl=120
+        )
+    )
+    guard = AsyncGuard(config=config)
+    try:
+        assert isinstance(guard.storage, AsyncTinyDBStorage)
+        assert guard.storage.ttl == 120
+
+        # Verify the storage actually works end-to-end
+        await guard.storage.set("auto_creation_key", "auto_creation_value")
+        assert await guard.storage.get("auto_creation_key") == "auto_creation_value"
+    finally:
+        guard.storage.db.close()
+
+
+@pytest.mark.skipif(not MONGODB_AVAILABLE, reason="pymongo is not installed")
+def test_guard_auto_creates_mongodb_storage():
+    """Guard() with storage.type='mongodb' should build a working MongoDBStorage."""
+    with patch("pywebguard.storage._mongodb.MongoClient") as mock_client:
+        mock_collection = MagicMock()
+        mock_db = MagicMock()
+        mock_db.__getitem__.return_value = mock_collection
+        mock_client.return_value.__getitem__.return_value = mock_db
+
+        config = GuardConfig(
+            storage=StorageConfig(
+                type="mongodb",
+                url="mongodb://localhost:27017/pywebguard_test",
+                table_name="custom_collection",
+                ttl=120,
+            )
+        )
+        guard = Guard(config=config)
+
+    assert isinstance(guard.storage, MongoDBStorage)
+    assert guard.storage.ttl == 120
+
+
+@pytest.mark.skipif(not MONGODB_AVAILABLE, reason="pymongo is not installed")
+@pytest.mark.asyncio
+async def test_async_guard_auto_creates_mongodb_storage():
+    """AsyncGuard() with storage.type='mongodb' should build a working AsyncMongoDBStorage."""
+    with patch("pywebguard.storage._mongodb.AsyncMongoClient") as mock_client:
+        mock_client.return_value = MagicMock()
+
+        config = GuardConfig(
+            storage=StorageConfig(
+                type="mongodb",
+                url="mongodb://localhost:27017/pywebguard_test",
+                table_name="custom_collection",
+                ttl=120,
+            )
+        )
+        guard = AsyncGuard(config=config)
+
+    assert isinstance(guard.storage, AsyncMongoDBStorage)
+    assert guard.storage.ttl == 120
+
+
+@pytest.mark.skipif(not PSYCOPG2_AVAILABLE, reason="psycopg2 is not installed")
+def test_guard_auto_creates_postgresql_storage():
+    """Guard() with storage.type='postgresql' should build a working PostgreSQLStorage."""
+    with patch("psycopg2.connect") as mock_connect:
+        mock_connection = MagicMock()
+        mock_cursor = MagicMock()
+        mock_cursor.__enter__.return_value = mock_cursor
+        mock_connection.cursor.return_value = mock_cursor
+        mock_connect.return_value = mock_connection
+
+        config = GuardConfig(
+            storage=StorageConfig(
+                type="postgresql",
+                url="postgresql://test:test@localhost:5432/test",
+                table_name="custom_table",
+                ttl=120,
+            )
+        )
+        guard = Guard(config=config)
+
+    assert isinstance(guard.storage, PostgreSQLStorage)
+    assert guard.storage.table_name == "custom_table"
+    assert guard.storage.ttl == 120
+
+
+@pytest.mark.skipif(not ASYNCPG_AVAILABLE, reason="asyncpg is not installed")
+@pytest.mark.asyncio
+async def test_async_guard_auto_creates_postgresql_storage():
+    """AsyncGuard() with storage.type='postgresql' should build a working AsyncPostgreSQLStorage."""
+    config = GuardConfig(
+        storage=StorageConfig(
+            type="postgresql",
+            url="postgresql://test:test@localhost:5432/test",
+            table_name="custom_table",
+            ttl=120,
+        )
+    )
+    guard = AsyncGuard(config=config)
+
+    assert isinstance(guard.storage, AsyncPostgreSQLStorage)
+    assert guard.storage.table_name == "custom_table"
+    assert guard.storage.ttl == 120

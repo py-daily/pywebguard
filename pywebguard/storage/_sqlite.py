@@ -28,6 +28,7 @@ class SQLiteStorage(BaseStorage):
         db_path: str = ":memory:",
         table_name: str = "pywebguard",
         check_same_thread: bool = True,
+        ttl: int = 3600,
     ):
         """
         Initialize the SQLite storage.
@@ -36,11 +37,30 @@ class SQLiteStorage(BaseStorage):
             db_path: Path to SQLite database file (use :memory: for in-memory database)
             table_name: Name of the table to store values
             check_same_thread: If True, only the creating thread may use the connection
+            ttl: Default TTL for stored data in seconds, used when `set` is called
+                without an explicit `ttl`
         """
         self.db_path = db_path
         self.table_name = table_name
         self.check_same_thread = check_same_thread
+        self.ttl = ttl
         self._init_db()
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     def _init_db(self) -> None:
         """Initialize the database and create the table if it doesn't exist."""
@@ -101,13 +121,14 @@ class SQLiteStorage(BaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         # Convert complex types to JSON
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        expiry = time.time() + ttl if ttl is not None else None
+        effective_ttl = self._resolve_ttl(ttl)
+        expiry = time.time() + effective_ttl if effective_ttl is not None else None
 
         with sqlite3.connect(
             self.db_path, check_same_thread=self.check_same_thread
@@ -192,6 +213,7 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         db_path: str = ":memory:",
         table_name: str = "pywebguard",
         check_same_thread: bool = True,
+        ttl: int = 3600,
     ):
         """
         Initialize the async SQLite storage.
@@ -200,6 +222,8 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
             db_path: Path to SQLite database file (use :memory: for in-memory database)
             table_name: Name of the table to store values
             check_same_thread: If True, only the creating thread may use the connection
+            ttl: Default TTL for stored data in seconds, used when `set` is called
+                without an explicit `ttl`
         """
         if not AIOSQLITE_AVAILABLE:
             raise ImportError(
@@ -210,7 +234,24 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         self.db_path = db_path
         self.table_name = table_name
         self.check_same_thread = check_same_thread
+        self.ttl = ttl
         self._initialized = False
+
+    def _resolve_ttl(self, ttl: Optional[int]) -> Optional[int]:
+        """
+        Resolve the effective TTL for a `set` call.
+
+        Args:
+            ttl: An explicitly provided TTL, or None to fall back to the default
+
+        Returns:
+            The TTL to use, or None if no expiry should be set
+        """
+        if ttl is not None and ttl > 0:
+            return ttl
+        if self.ttl > 0:
+            return self.ttl
+        return None
 
     async def _ensure_initialized(self) -> None:
         """Ensure the database is initialized."""
@@ -279,7 +320,7 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         Args:
             key: The key to store
             value: The value to store
-            ttl: Time to live in seconds
+            ttl: Time to live in seconds (None uses the storage's default TTL)
         """
         await self._ensure_initialized()
 
@@ -287,7 +328,8 @@ class AsyncSQLiteStorage(AsyncBaseStorage):
         if not isinstance(value, (str, int, float, bool)) and value is not None:
             value = json.dumps(value)
 
-        expiry = time.time() + ttl if ttl is not None else None
+        effective_ttl = self._resolve_ttl(ttl)
+        expiry = time.time() + effective_ttl if effective_ttl is not None else None
 
         async with aiosqlite.connect(
             self.db_path, check_same_thread=self.check_same_thread
