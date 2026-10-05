@@ -133,7 +133,7 @@ jobs:
       - name: Bump version and push tag
         if: github.ref == 'refs/heads/main' && github.event_name == 'push'
         id: bump
-        uses: anothrNick/github-tag-action@1.67.0
+        uses: anothrNick/github-tag-action@1.75.0
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
           WITH_V: true
