@@ -28,42 +28,16 @@ PENETRATION_DETECTION_SUSPICIOUS_PATTERNS = [
     r"(?i)(?:\.env|\.git|\.github|\.gitignore|\.gitattributes|\.gitmodules|\.gitlab|\.gitlab-ci\.yml)",
     # IDE and config files
     r"(?i)(?:\.DS_Store|\.idea|\.vscode|\.sublime|\.config|\.local|\.ssh|\.aws|\.npm|\.yarn)",
-    # Backup and log files
-    r"(?i)(?:\.log|\.sql|\.bak|\.backup|\.old|\.swp|\.swo|\.tmp|\.temp|\.cache)",
     # Apache config files
     r"(?i)(?:\.htaccess|\.htpasswd|\.htgroup|\.htdigest|\.htdbm|\.htpass)",
-    # Config files
-    r"(?i)(?:\.ini|\.conf|\.config|\.properties|\.xml|\.json|\.yaml|\.yml)",
     # Certificate and key files
     r"(?i)(?:\.pem|\.key|\.crt|\.cer|\.der|\.p12|\.pfx|\.p7b|\.p7c|\.p7m|\.p7s)",
     # Database files
     r"(?i)(?:\.db|\.sqlite|\.sqlite3|\.mdb|\.accdb|\.dbf|\.mdf|\.ldf|\.ndf)",
-    # Script files
+    # Backup, log and temporary files
+    r"(?i)(?:\.log|\.sql|\.bak|\.backup|\.old|\.new|\.swp|\.swo|\.tmp|\.temp|\.cache|\.swap)",
+    # Server-side script/webshell extensions
     r"(?i)(?:\.php|\.asp|\.aspx|\.jsp|\.jspx|\.do|\.action|\.cgi|\.pl|\.py|\.rb|\.sh)",
     # Executable files
     r"(?i)(?:\.exe|\.dll|\.so|\.dylib|\.jar|\.war|\.ear|\.apk|\.ipa|\.app)",
-    # Archive files
-    r"(?i)(?:\.zip|\.tar|\.gz|\.rar|\.7z|\.bz2|\.xz|\.tgz|\.tbz2|\.txz)",
-    # Document files
-    r"(?i)(?:\.pdf|\.doc|\.docx|\.xls|\.xlsx|\.ppt|\.pptx|\.odt|\.ods|\.odp)",
-    # Image files
-    r"(?i)(?:\.jpg|\.jpeg|\.png|\.gif|\.bmp|\.tiff|\.webp|\.svg|\.ico)",
-    # Media files
-    r"(?i)(?:\.mp3|\.mp4|\.avi|\.mov|\.wmv|\.flv|\.wav|\.ogg|\.m4a|\.m4v)",
-    # Font files
-    r"(?i)(?:\.ttf|\.otf|\.woff|\.woff2|\.eot|\.sfnt|\.pfb|\.pfa|\.bdf|\.pcf)",
-    # Style files
-    r"(?i)(?:\.css|\.scss|\.sass|\.less|\.styl|\.stylus|\.postcss)",
-    # Script files
-    r"(?i)(?:\.js|\.jsx|\.ts|\.tsx|\.coffee|\.litcoffee|\.coffee\.md)",
-    # HTML files
-    r"(?i)(?:\.html|\.htm|\.xhtml|\.shtml|\.phtml|\.jhtml|\.dhtml)",
-    # Text files
-    r"(?i)(?:\.txt|\.text|\.md|\.markdown|\.rst|\.asciidoc|\.adoc|\.asc)",
-    # Data files
-    r"(?i)(?:\.csv|\.tsv|\.tab|\.dat|\.data|\.raw|\.bin|\.hex)",
-    # System files
-    r"(?i)(?:\.lock|\.pid|\.sock|\.socket|\.fifo|\.pipe|\.sem|\.shm)",
-    # Temporary files
-    r"(?i)(?:\.bak|\.backup|\.old|\.new|\.tmp|\.temp|\.cache|\.swap)",
 ]
