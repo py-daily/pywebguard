@@ -4,7 +4,7 @@ aioredis>=2.0.0
 sqlalchemy>=2.0.54
 pymongo
 aiosqlite
-tinydb>=4.0.0
+tinydb>=4.9.0
 psycopg2-binary>=2.9.13
 asyncpg>=0.31.0
 meilisearch
