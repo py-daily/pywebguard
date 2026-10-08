@@ -136,6 +136,106 @@ class TestPenetrationDetector:
         assert penetration_detector._check_suspicious_patterns(123) is False
 
 
+class TestPenetrationDetectorDefaultPatterns:
+    """Tests for PenetrationDetector using the library's default pattern list.
+
+    Regression tests for #20: the default suspicious-pattern list used to
+    blanket-match ordinary file extensions (.pdf, .html, .png, etc.) in query
+    parameters and headers, blocking completely benign requests.
+    """
+
+    @pytest.fixture
+    def penetration_detector(self) -> PenetrationDetector:
+        """Create a penetration detector using the default configuration."""
+        return PenetrationDetector(PenetrationDetectionConfig(), MemoryStorage())
+
+    def test_benign_pdf_filename_in_query_is_allowed(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """A normal filename with a .pdf extension must not be flagged."""
+        request_info: Dict[str, Any] = {
+            "path": "/download",
+            "query": {"file": "quarterly-report.pdf"},
+            "headers": {},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is True
+
+    def test_benign_html_referer_is_allowed(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """A normal referer URL ending in .html must not be flagged."""
+        request_info: Dict[str, Any] = {
+            "path": "/",
+            "query": {},
+            "headers": {"referer": "https://example.com/products.html"},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is True
+
+    def test_benign_png_upload_is_allowed(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """A normal filename with a .png extension must not be flagged."""
+        request_info: Dict[str, Any] = {
+            "path": "/upload",
+            "query": {"filename": "profile-picture.png"},
+            "headers": {},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is True
+
+    def test_sql_injection_still_detected(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """The default patterns must still catch SQL injection attempts."""
+        request_info: Dict[str, Any] = {
+            "path": "/api/users?id=1 UNION SELECT username,password FROM users",
+            "query": {},
+            "headers": {},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is False
+        assert result["reason"] == "Suspicious path detected"
+
+    def test_xss_still_detected(self, penetration_detector: PenetrationDetector):
+        """The default patterns must still catch XSS attempts."""
+        request_info: Dict[str, Any] = {
+            "path": "/api/users",
+            "query": {"name": "<script>alert('XSS')</script>"},
+            "headers": {},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is False
+        assert result["reason"] == "Suspicious query parameter detected"
+
+    def test_path_traversal_still_detected(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """The default patterns must still catch path traversal attempts."""
+        request_info: Dict[str, Any] = {
+            "path": "/api/users",
+            "query": {},
+            "headers": {"Referer": "../../etc/passwd"},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is False
+        assert result["reason"] == "Suspicious header detected"
+
+    def test_webshell_extension_still_detected(
+        self, penetration_detector: PenetrationDetector
+    ):
+        """Probing for a server-side script/webshell extension is still flagged."""
+        request_info: Dict[str, Any] = {
+            "path": "/uploads/shell.php",
+            "query": {},
+            "headers": {},
+        }
+        result = penetration_detector.check_request(request_info)
+        assert result["allowed"] is False
+        assert result["reason"] == "Suspicious path detected"
+
+
 class TestAsyncPenetrationDetector:
     """Tests for AsyncPenetrationDetector."""
 
