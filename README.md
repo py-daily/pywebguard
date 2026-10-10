@@ -55,7 +55,7 @@
 
 A comprehensive security library for Python web applications, providing middleware for IP filtering, rate limiting, and other security features with both synchronous and asynchronous support.
 
-For detailed installation instructions and configuration options, see [Installation Guide](https://github.com/py-daily/pywebguard/blob/main/docs/installation.md).
+For detailed installation instructions and configuration options, see [Installation Guide](https://py-daily.github.io/pywebguard/installation.html).
 
 ## Key Features
 
@@ -236,11 +236,12 @@ For more detailed examples, check the [examples](https://github.com/py-daily/pyw
 
 
 ## Documentation
-- [Installation Guide](https://github.com/py-daily/pywebguard/blob/main/docs/installation.md)
-- [CLI Usage](https://github.com/py-daily/pywebguard/blob/main/docs/cli.md)
-- [Core Features](https://github.com/py-daily/pywebguard/blob/main/docs/core/)
-- [Framework Integration](https://github.com/py-daily/pywebguard/blob/main/docs/frameworks/)
-- [Storage Backends](https://github.com/py-daily/pywebguard/blob/main/docs/storage/)
+Full docs: [py-daily.github.io/pywebguard](https://py-daily.github.io/pywebguard/)
+- [Installation Guide](https://py-daily.github.io/pywebguard/installation.html)
+- [CLI Usage](https://py-daily.github.io/pywebguard/cli.html)
+- [Core Features](https://py-daily.github.io/pywebguard/core/)
+- [Framework Integration](https://py-daily.github.io/pywebguard/frameworks/)
+- [Storage Backends](https://py-daily.github.io/pywebguard/storage/)
 
 ## Contributors
 
