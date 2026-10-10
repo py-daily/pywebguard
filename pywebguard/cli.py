@@ -202,8 +202,8 @@ def cmd_init(output_path: str, framework: Optional[str] = None) -> int:
         },
         "storage": {
             "type": "memory",
-            "redis_url": None,
-            "redis_prefix": "pywebguard:",
+            "url": None,
+            "prefix": "pywebguard:",
             "ttl": 3600,
         },
     }
@@ -577,10 +577,8 @@ def cmd_status(config_path: str) -> int:
                 # For Redis, we can use pattern matching
                 import redis
 
-                r = redis.from_url(
-                    config.storage.redis_url or "redis://localhost:6379/0"
-                )
-                banned_keys = r.keys(f"{config.storage.redis_prefix}banned_ip:*")
+                r = redis.from_url(config.storage.url or "redis://localhost:6379/0")
+                banned_keys = r.keys(f"{config.storage.prefix}banned_ip:*")
                 banned_ips = [key.decode().split(":")[-1] for key in banned_keys]
             else:
                 # For other storage types, we can't easily get this information
@@ -671,8 +669,8 @@ def cmd_interactive_init() -> int:
         },
         "storage": {
             "type": "memory",
-            "redis_url": None,
-            "redis_prefix": "pywebguard:",
+            "url": None,
+            "prefix": "pywebguard:",
             "ttl": 3600,
         },
     }
@@ -809,11 +807,11 @@ def cmd_interactive_init() -> int:
             input("Enter Redis URL [redis://localhost:6379/0]: ").strip()
             or "redis://localhost:6379/0"
         )
-        config["storage"]["redis_url"] = redis_url
+        config["storage"]["url"] = redis_url
         redis_prefix = (
             input("Enter Redis key prefix [pywebguard:]: ").strip() or "pywebguard:"
         )
-        config["storage"]["redis_prefix"] = redis_prefix
+        config["storage"]["prefix"] = redis_prefix
     elif storage_choice == "3":
         config["storage"]["type"] = "sqlite"
         db_path = (
@@ -945,8 +943,8 @@ def _get_storage_from_config(config: GuardConfig, config_data: Dict[str, Any]) -
                 "Redis storage is not available. Install it with 'pip install pywebguard[redis]'"
             )
         return RedisStorage(
-            url=config.storage.redis_url or "redis://localhost:6379/0",
-            prefix=config.storage.redis_prefix,
+            url=config.storage.url or "redis://localhost:6379/0",
+            prefix=config.storage.prefix,
         )
     elif config.storage.type == "sqlite":
         if SQLiteStorage is None:
@@ -991,10 +989,10 @@ def _get_storage_and_desc_from_config(
                 "Redis storage is not available. Install it with 'pip install pywebguard[redis]'"
             )
         storage = RedisStorage(
-            url=config.storage.redis_url or "redis://localhost:6379/0",
-            prefix=config.storage.redis_prefix,
+            url=config.storage.url or "redis://localhost:6379/0",
+            prefix=config.storage.prefix,
         )
-        storage_desc = f"Redis ({config.storage.redis_url})"
+        storage_desc = f"Redis ({config.storage.url})"
     elif config.storage.type == "sqlite":
         if SQLiteStorage is None:
             raise ImportError(
