@@ -1,5 +1,7 @@
 # PyWebGuard Documentation
 
+[![PyPI Downloads](https://static.pepy.tech/personalized-badge/pywebguard?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads)](https://pepy.tech/projects/pywebguard)
+
 PyWebGuard is a comprehensive security library for Python web applications. It provides middleware and utilities for IP filtering, rate limiting, and other security features for FastAPI and Flask with both synchronous and asynchronous support.
 
 ## Features

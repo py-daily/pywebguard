@@ -185,8 +185,8 @@ The configuration file is a JSON file with the following structure:
   },
   "storage": {
     "type": "memory",
-    "redis_url": null,
-    "redis_prefix": "pywebguard:",
+    "url": null,
+    "prefix": "pywebguard:",
     "ttl": 3600
   }
 }
