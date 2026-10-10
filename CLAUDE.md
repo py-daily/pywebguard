@@ -42,7 +42,7 @@ black --check .            # formatting (CI checks this — see below on the ver
 ## Conventions
 
 - **Formatting**: Black, pinned to `26.5.1` exactly in `requirements/dev.txt` and `setup.py`'s
-  `dev` extra, and in CI (`.github/workflows/pipeline.yaml`). **Don't loosen this pin** — this repo
+  `dev` extra, and in CI (`.github/workflows/ci.yaml`). **Don't loosen this pin** — this repo
   already broke once from an unpinned `black>=25.1.0` combined with a CI step that installed its
   own floating, unpinned Black version, causing CI to fail on files nobody had touched. If Black
   needs upgrading, do it deliberately (reformat + bump the pin together, one PR), not by accident.
@@ -50,12 +50,19 @@ black --check .            # formatting (CI checks this — see below on the ver
   `test`, `chore`, `perf`, `ci`, `build`.
 - **Branch naming**: `feature/your-feature-name` per `contribution.md` — align the branch's
   implied type with the PR title's type for consistency.
+- **CI/CD is split into reusable workflows** under `.github/workflows/`: `pipeline.yaml` is a thin
+  orchestrator (triggers on push to `main` and all PRs) that calls `ci.yaml` (lint + tests +
+  coverage), `docker-smoke.yaml` (FastAPI docker example smoke test), `release.yaml` (version
+  bump + tag + GitHub Release, main-branch pushes only), `publish.yaml` (PyPI upload, main-branch
+  pushes only), and `notify.yaml` (Telegram status). `release`/`publish`/`notify` depend on `ci`
+  and `docker-smoke` via `needs:`, so a failure anywhere upstream still blocks publishing, same as
+  before the split. If you add a step, add it to the relevant module file, not `pipeline.yaml`.
 - **Releases — NOT release-please.** Unlike some of our other repos, this one uses a **custom**
-  auto-tag-bump script embedded directly in `.github/workflows/pipeline.yaml`: on push to `main`,
-  it sniffs recent commit messages against `MINOR_WORDS`/`MAJOR_WORDS`/`PATCH_WORDS` lists, bumps a
-  git tag accordingly (defaulting to patch if nothing matches — so `hotfix:`/`refactor:`/etc. all
-  silently default to a patch bump, which is probably fine but worth knowing), cuts a GitHub
-  Release, and publishes to PyPI via `twine`. This works today; migrating it to actual
+  auto-tag-bump script in `.github/workflows/release.yaml`: on push to `main`, it sniffs recent
+  commit messages against `MINOR_WORDS`/`MAJOR_WORDS`/`PATCH_WORDS` lists, bumps a git tag
+  accordingly (defaulting to patch if nothing matches — so `hotfix:`/`refactor:`/etc. all silently
+  default to a patch bump, which is probably fine but worth knowing), cuts a GitHub Release, and
+  `publish.yaml` then publishes to PyPI via `twine`. This works today; migrating it to actual
   `release-please` (like the other repos) is a real, separate piece of work someone should
   deliberately choose to do — don't assume it's already release-please-based.
 - **Dependencies**: Dependabot now handles `pip` + `github-actions` weekly — don't open PRs that

@@ -1,0 +1,68 @@
+name: Notify
+
+on:
+  workflow_call:
+    inputs:
+      coverage:
+        description: "Test coverage percentage"
+        type: string
+        required: false
+        default: ""
+      ci_result:
+        type: string
+        required: true
+      docker_smoke_result:
+        type: string
+        required: true
+      release_result:
+        type: string
+        required: true
+      publish_result:
+        type: string
+        required: true
+
+permissions: {}
+
+jobs:
+  telegram:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Determine overall status
+        id: status
+        run: |
+          results="${{ inputs.ci_result }} ${{ inputs.docker_smoke_result }} ${{ inputs.release_result }} ${{ inputs.publish_result }}"
+          if [[ "$results" == *"failure"* ]]; then
+            echo "emoji=❌" >> "$GITHUB_OUTPUT"
+            echo "status=Failed" >> "$GITHUB_OUTPUT"
+          elif [[ "$results" == *"cancelled"* ]]; then
+            echo "emoji=⚠️" >> "$GITHUB_OUTPUT"
+            echo "status=Cancelled" >> "$GITHUB_OUTPUT"
+          elif [[ "$results" == *"skipped"* ]]; then
+            echo "emoji=⚠️" >> "$GITHUB_OUTPUT"
+            echo "status=Incomplete (one or more jobs skipped)" >> "$GITHUB_OUTPUT"
+          else
+            echo "emoji=🚀" >> "$GITHUB_OUTPUT"
+            echo "status=Success" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Send Telegram Notification
+        uses: appleboy/telegram-action@master
+        with:
+          to: ${{ secrets.TELEGRAM_TO }}
+          token: ${{ secrets.TELEGRAM_TOKEN }}
+          format: markdown
+          message: |
+            ${{ steps.status.outputs.emoji }} *PyWebGuard Pipeline Status: ${{ steps.status.outputs.status }}*
+
+            👤 *Actor:* `${{ github.actor }}`
+            📦 *Repository:* `${{ github.repository }}`
+            🔄 *Branch:* `${{ github.ref_name }}`
+            📝 *Commit:* `${{ github.sha }}`
+            💬 *Message:* `${{ github.event.head_commit.message }}`
+
+            📊 *Test Coverage:* `${{ inputs.coverage }}%`
+
+            🔍 *Run:* [View Run](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
+
+            *CI:* `${{ inputs.ci_result }}` · *Docker:* `${{ inputs.docker_smoke_result }}` · *Release:* `${{ inputs.release_result }}` · *Publish:* `${{ inputs.publish_result }}`

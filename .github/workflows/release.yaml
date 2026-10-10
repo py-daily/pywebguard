@@ -1,0 +1,63 @@
+name: Release
+
+on:
+  workflow_call:
+    inputs:
+      coverage:
+        description: "Test coverage percentage, for the release notes"
+        type: string
+        required: false
+        default: ""
+    outputs:
+      tag:
+        description: "The git tag created for this release"
+        value: ${{ jobs.bump.outputs.tag }}
+
+permissions:
+  contents: write
+
+jobs:
+  bump:
+    runs-on: ubuntu-latest
+    outputs:
+      tag: ${{ steps.bump.outputs.tag }}
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+
+      - name: Bump version and push tag
+        id: bump
+        uses: anothrNick/github-tag-action@1.75.0
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          WITH_V: true
+          DEFAULT_BUMP: patch
+          RELEASE_BRANCHES: main
+          TAG_PREFIX: v
+          # Version bump rules:
+          # - major: "major:" or "breaking:" in commit message → v(X+1).0.0
+          # - minor: "feat:" or "feature:" in commit message → vX.(Y+1).0
+          # - patch: "fix:" or "patch:" in commit message → vX.Y.(Z+1)
+          MAJOR_WORDS: major,breaking
+          MINOR_WORDS: feat,feature
+          PATCH_WORDS: fix,patch
+
+      - name: Create Release
+        uses: softprops/action-gh-release@v3
+        with:
+          name: Release ${{ steps.bump.outputs.tag }}
+          tag_name: ${{ steps.bump.outputs.tag }}
+          body: |
+            ## What's Changed
+
+            This release includes:
+            - Test coverage: ${{ inputs.coverage }}%
+            - Latest security updates
+            - Bug fixes and improvements
+
+            For detailed changes, check the [commit history](https://github.com/${{ github.repository }}/commits).
+          draft: false
+          prerelease: false
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
