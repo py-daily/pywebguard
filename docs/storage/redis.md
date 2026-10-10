@@ -23,8 +23,7 @@ pip install pywebguard[redis]
 ### Synchronous Usage
 
 ```python
-from pywebguard import Guard, GuardConfig
-from pywebguard.storage._redis import RedisStorage
+from pywebguard import Guard, GuardConfig, RedisStorage
 
 # Create Redis storage
 storage = RedisStorage(
@@ -39,8 +38,7 @@ guard = Guard(config=GuardConfig(), storage=storage)
 ### Asynchronous Usage
 
 ```python
-from pywebguard import AsyncGuard, GuardConfig
-from pywebguard.storage._redis import AsyncRedisStorage
+from pywebguard import AsyncGuard, GuardConfig, AsyncRedisStorage
 
 # Create async Redis storage
 storage = AsyncRedisStorage(
@@ -56,8 +54,10 @@ guard = AsyncGuard(config=GuardConfig(), storage=storage)
 
 The Redis storage backend accepts the following parameters:
 
-- `url`: Redis connection URL (default: "redis://localhost:6379/0")
-- `prefix`: Key prefix for all stored values (default: "pywebguard:")
+- `url`: Redis connection URL (default: `"redis://localhost:6379/0"`)
+- `prefix`: Key prefix for all stored values (default: `"pywebguard:"`)
+- `ttl`: Default TTL for stored values in seconds, used when `set`/`increment` are called without
+  an explicit `ttl` (default: `3600`)
 
 ### Connection URL Format
 
@@ -79,7 +79,12 @@ Examples:
 
 ```python
 class RedisStorage:
-    def __init__(self, url: str = "redis://localhost:6379/0", prefix: str = "pywebguard:"):
+    def __init__(
+        self,
+        url: str = "redis://localhost:6379/0",
+        prefix: str = "pywebguard:",
+        ttl: int = 3600,
+    ):
         """Initialize the Redis storage."""
         
     def get(self, key: str) -> Optional[Any]:
@@ -105,7 +110,12 @@ class RedisStorage:
 
 ```python
 class AsyncRedisStorage:
-    def __init__(self, url: str = "redis://localhost:6379/0", prefix: str = "pywebguard:"):
+    def __init__(
+        self,
+        url: str = "redis://localhost:6379/0",
+        prefix: str = "pywebguard:",
+        ttl: int = 3600,
+    ):
         """Initialize the async Redis storage."""
         
     async def get(self, key: str) -> Optional[Any]:
@@ -147,15 +157,14 @@ Redis storage is ideal for:
 ## Example with Configuration
 
 ```python
-from pywebguard import GuardConfig
-from pywebguard.storage._redis import RedisStorage
+from pywebguard import GuardConfig, RedisStorage
 
 # Configure storage in GuardConfig
 config = GuardConfig(
     storage={
         "type": "redis",
-        "redis_url": "redis://localhost:6379/0",
-        "redis_prefix": "myapp:",
+        "url": "redis://localhost:6379/0",
+        "prefix": "myapp:",
         "ttl": 3600  # Default TTL for stored values (1 hour)
     }
 )

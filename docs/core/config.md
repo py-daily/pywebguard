@@ -83,8 +83,8 @@ rate_limit = RateLimitConfig(
     requests_per_minute=60,
     burst_size=10,
     auto_ban_threshold=100,
-    auto_ban_duration_minutes=60
-    excluded_paths: ["/ready", "/healthz"]
+    auto_ban_duration_minutes=60,
+    excluded_paths=["/ready", "/healthz"]
 )
 
 # Or as a dictionary
@@ -175,7 +175,10 @@ penetration_dict = {
 
 - `enabled`: Whether penetration detection is enabled (default: `True`)
 - `log_suspicious`: Whether to log suspicious activities (default: `True`)
-- `suspicious_patterns`: List of regex patterns to detect suspicious activities (default: `[]`)
+- `suspicious_patterns`: List of regex patterns to detect suspicious activities (default: PyWebGuard's
+  built-in pattern list, not an empty list — see `pywebguard/core/constants.py`. Those built-in
+  patterns are known to cause false positives on some ordinary requests; pass your own list if
+  that's a problem for your application)
 
 ## CORS Configuration
 
@@ -214,6 +217,13 @@ cors_dict = {
 - `allow_credentials`: Whether to allow credentials (default: `False`)
 - `max_age`: Maximum age of preflight requests in seconds (default: `600`)
 
+!!! warning
+    Don't set `allow_credentials=True` while leaving `allow_origins` as the default `["*"]`.
+    Browsers reject that combination outright (a wildcard origin can't be paired with
+    credentials), so the request will fail client-side regardless of what the server sends.
+    Set `allow_origins` to your actual origin(s) whenever `allow_credentials=True`, as in the
+    example above.
+
 ## Logging Configuration
 
 The `LoggingConfig` class configures logging.
@@ -249,6 +259,7 @@ logging_dict = {
 - `enabled`: Whether logging is enabled (default: `True`)
 - `log_file`: Path to log file (default: `None` for stdout)
 - `log_level`: Logging level (default: `"INFO"`)
+- `propagate`: Whether log records propagate to ancestor loggers (default: `True`)
 - `stream`: Whether to log to stdout (default: `False`)
 - `stream_levels`: List of levels to log to stdout (default: `[]`)
 - `max_log_size`: Maximum log file size in bytes (default: `10 * 1024 * 1024` = 10MB)
@@ -269,26 +280,33 @@ from pywebguard.core.config import StorageConfig
 # Create storage configuration
 storage = StorageConfig(
     type="redis",
-    redis_url="redis://localhost:6379/0",
-    redis_prefix="pywebguard:",
+    url="redis://localhost:6379/0",
+    prefix="pywebguard:",
     ttl=3600
 )
 
 # Or as a dictionary
 storage_dict = {
     "type": "redis",
-    "redis_url": "redis://localhost:6379/0",
-    "redis_prefix": "pywebguard:",
+    "url": "redis://localhost:6379/0",
+    "prefix": "pywebguard:",
     "ttl": 3600
 }
 ```
 
 ### Fields
 
-- `type`: Storage type (default: `"memory"`, options: `"memory"`, `"redis"`)
-- `redis_url`: Redis connection URL (required if type is `"redis"`)
-- `redis_prefix`: Prefix for Redis keys (default: `"pywebguard:"`)
+- `type`: Storage type (default: `"memory"`, options: `"memory"`, `"redis"`, `"sqlite"`, `"tinydb"`,
+  `"mongodb"`, `"postgresql"`)
+- `url`: Connection URL for the storage backend — e.g. a Redis/MongoDB/PostgreSQL URL, or a file
+  path for SQLite/TinyDB (default: `None`, each backend falls back to its own default when unset)
+- `prefix`: Prefix for stored keys (default: `"pywebguard:"`)
 - `ttl`: Time-to-live for stored data in seconds (default: `3600`)
+- `table_name`: Table or collection name, used by the SQL/MongoDB backends (default: `"pywebguard"`)
+
+!!! note
+    The field names are `url`/`prefix`, not `redis_url`/`redis_prefix` — those don't exist on
+    `StorageConfig` and are silently ignored if used by mistake.
 
 ## Complete Configuration Example
 
@@ -340,8 +358,8 @@ config = GuardConfig(
     },
     storage={
         "type": "redis",
-        "redis_url": "redis://localhost:6379/0",
-        "redis_prefix": "pywebguard:",
+        "url": "redis://localhost:6379/0",
+        "prefix": "pywebguard:",
         "ttl": 3600
     }
 )
@@ -378,7 +396,7 @@ config = GuardConfig(
 )
 
 # Convert to dictionary
-config_dict = config.dict()
+config_dict = config.model_dump()
 
 # Save to file
 with open("pywebguard.json", "w") as f:

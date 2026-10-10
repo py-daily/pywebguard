@@ -7,14 +7,10 @@ PyWebGuard provides PostgreSQL storage backends for both synchronous and asynchr
 To use PostgreSQL storage, you need to install PyWebGuard with the PostgreSQL extra:
 
 ```bash
-# For synchronous applications (Flask)
 pip install pywebguard[postgresql]
-
-# For asynchronous applications (FastAPI)
-pip install pywebguard[postgresql-async]
 ```
 
-This will install the required packages:
+There's a single `postgresql` extra (no separate `-async` variant) — it installs both packages:
 - `psycopg2-binary` for synchronous operations
 - `asyncpg` for asynchronous operations
 

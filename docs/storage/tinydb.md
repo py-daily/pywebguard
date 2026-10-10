@@ -23,8 +23,7 @@ pip install pywebguard[tinydb]
 ### Synchronous Usage
 
 ```python
-from pywebguard import Guard, GuardConfig
-from pywebguard.storage._tinydb import TinyDBStorage
+from pywebguard import Guard, GuardConfig, TinyDBStorage
 
 # Create TinyDB storage
 storage = TinyDBStorage(
@@ -39,8 +38,7 @@ guard = Guard(config=GuardConfig(), storage=storage)
 ### Asynchronous Usage
 
 ```python
-from pywebguard import AsyncGuard, GuardConfig
-from pywebguard.storage._tinydb import AsyncTinyDBStorage
+from pywebguard import AsyncGuard, GuardConfig, AsyncTinyDBStorage
 
 # Create async TinyDB storage
 storage = AsyncTinyDBStorage(
@@ -56,8 +54,10 @@ guard = AsyncGuard(config=GuardConfig(), storage=storage)
 
 The TinyDB storage backend accepts the following parameters:
 
-- `db_path`: Path to TinyDB JSON file (default: "pywebguard.json")
-- `table_name`: Name of the table to store values (default: "default")
+- `db_path`: Path to TinyDB JSON file (default: `"pywebguard.json"`)
+- `table_name`: Name of the table to store values (default: `"default"`)
+- `ttl`: Default TTL for stored values in seconds, used when `set`/`increment` are called without
+  an explicit `ttl` (default: `3600`)
 
 ## API Reference
 
@@ -65,7 +65,12 @@ The TinyDB storage backend accepts the following parameters:
 
 ```python
 class TinyDBStorage:
-    def __init__(self, db_path: str = "pywebguard.json", table_name: str = "default"):
+    def __init__(
+        self,
+        db_path: str = "pywebguard.json",
+        table_name: str = "default",
+        ttl: int = 3600,
+    ):
         """Initialize the TinyDB storage."""
         
     def get(self, key: str) -> Optional[Any]:
@@ -91,7 +96,12 @@ class TinyDBStorage:
 
 ```python
 class AsyncTinyDBStorage:
-    def __init__(self, db_path: str = "pywebguard.json", table_name: str = "default"):
+    def __init__(
+        self,
+        db_path: str = "pywebguard.json",
+        table_name: str = "default",
+        ttl: int = 3600,
+    ):
         """Initialize the async TinyDB storage."""
         
     async def get(self, key: str) -> Optional[Any]:
