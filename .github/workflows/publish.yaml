@@ -1,0 +1,55 @@
+name: Publish to PyPI
+
+on:
+  workflow_call:
+    inputs:
+      version:
+        description: "The tag (e.g. v1.2.3) to build and publish"
+        type: string
+        required: true
+
+permissions:
+  contents: read
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout Repo
+        uses: actions/checkout@v7
+
+      - name: Set up Python
+        uses: actions/setup-python@v7
+        with:
+          python-version: '3.11'
+
+      - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
+        env:
+          VERSION: ${{ inputs.version }}
+        run: |
+          # Upgrade pip
+          python3 -m pip install --upgrade pip
+          # Install build deps
+          python3 -m pip install setuptools wheel twine
+          # If requirements.txt exists, install from it
+          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          # Install the package from setup.py
+          # Strip 'v' prefix from version for setup.py
+          VERSION=${VERSION#v}
+          echo "Building version: $VERSION"
+          python3 setup.py install
+
+      # Upload to PyPi
+      - name: Build and Upload to PyPi
+        env:
+          VERSION: ${{ inputs.version }}
+          TWINE_USERNAME: __token__
+          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
+        run: |
+          # Strip 'v' prefix from version for setup.py
+          VERSION=${VERSION#v}
+          echo "Building version: $VERSION"
+          python3 setup.py sdist bdist_wheel
+          ls -la dist/
+          python3 -m twine upload --verbose dist/*.whl dist/*.tar.gz

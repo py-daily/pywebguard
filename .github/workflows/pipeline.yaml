@@ -12,190 +12,37 @@ permissions:
   issues: write
 
 jobs:
-  build:
-    runs-on: ubuntu-latest
-    strategy:
-      max-parallel: 4
-      matrix:
-        python-version: ['3.11']
+  ci:
+    uses: ./.github/workflows/ci.yaml
+    secrets: inherit
 
-    steps:
-      - name: Checkout Repo
-        uses: actions/checkout@v7
+  docker_smoke:
+    uses: ./.github/workflows/docker-smoke.yaml
 
-      - name: Set up Python ${{ matrix.python-version }}
-        uses: actions/setup-python@v7
-        with:
-          python-version: ${{ matrix.python-version }}
+  release:
+    needs: [ci, docker_smoke]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ./.github/workflows/release.yaml
+    with:
+      coverage: ${{ needs.ci.outputs.coverage }}
+    secrets: inherit
 
-      - name: Install Dependencies
-        run: |
-          python -m pip install --upgrade pip
-          pip install -r requirements.txt
-          pip install pytest-cov pytest-html
+  publish:
+    needs: [release]
+    if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ./.github/workflows/publish.yaml
+    with:
+      version: ${{ needs.release.outputs.tag }}
+    secrets: inherit
 
-      - name: Check Code Format
-        run: |
-          pip install "black==26.5.1"
-          black --check .
-
-      - name: Run Tests
-        run: |
-          pytest --verbose tests/
-      
-      - name: Test FastAPI Example
-        run: |
-          cd examples/docker-fastapi
-          docker build -t pywebguard-demo .
-          docker run -d -p 8000:8000 --name pywebguard-demo pywebguard-demo
-          # Wait for the application to start
-          sleep 10
-          # Test the endpoints with a custom user agent
-          curl -f -A "PyWebGuard-Test/1.0" http://localhost:8000/ || exit 1
-          curl -f -A "PyWebGuard-Test/1.0" http://localhost:8000/api/status || exit 1
-          # Test rate limiting
-          for i in {1..6}; do
-            curl -s -A "PyWebGuard-Test/1.0" http://localhost:8000/api/protected
-          done
-          # Cleanup
-          docker stop pywebguard-demo
-          docker rm pywebguard-demo
-      
-      - name: Pytest Coverage
-        id: coverage
-        run: |
-          pytest --cov=pywebguard --cov-report=term-missing --cov-report=html --cov-report=xml tests/
-          echo "Coverage report generated in htmlcov/"
-          # Extract coverage and format as percentage
-          COVERAGE=$(cat coverage.xml | grep -o 'line-rate="[0-9.]*"' | cut -d'"' -f2)
-          COVERAGE_PCT=$(printf "%.1f" $(echo "$COVERAGE * 100" | bc))
-          echo "coverage=$COVERAGE_PCT" >> $GITHUB_OUTPUT
-          echo "Coverage: $COVERAGE_PCT%"
-
-      - name: Upload Coverage Report
-        uses: actions/upload-artifact@v7
-        with:
-          name: coverage-report
-          path: htmlcov/
-
-      - name: Comment PR with Coverage
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v9
-        with:
-          github-token: ${{ secrets.GITHUB_TOKEN }}
-          script: |
-            const coverage = '${{ steps.coverage.outputs.coverage }}';
-            const message = `## 📊 Test Coverage Report
-            
-            Current test coverage: **${coverage}%**
-            
-            Detailed coverage report is available in the [workflow artifacts](${context.serverUrl}/${context.repo.owner}/${context.repo.repo}/actions/runs/${context.runId}).
-            
-            ### Coverage Summary
-            - Total Coverage: ${coverage}%
-            - Report generated at: ${new Date().toISOString()}
-            `;
-            
-            try {
-              await github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: message
-              });
-            } catch (error) {
-              console.error('Error creating comment:', error);
-              throw error;
-            }
-
-      - name: Send Telegram Notification
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: appleboy/telegram-action@master
-        with:
-          to: ${{ secrets.TELEGRAM_TO }}
-          token: ${{ secrets.TELEGRAM_TOKEN }}
-          format: markdown
-          message: |
-            🚀 *PyWebGuard Pipeline Status*
-
-            👤 *Actor:* `${{ github.actor }}`
-            📦 *Repository:* `${{ github.repository }}`
-            🔄 *Branch:* `${{ github.ref_name }}`
-            📝 *Commit:* `${{ github.sha }}`
-            💬 *Message:* `${{ github.event.head_commit.message }}`
-
-            📊 *Test Coverage:* `${{ steps.coverage.outputs.coverage }}%`
-
-            🔍 *Coverage Report:* [View Report](${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }})
-
-            *Status:* `${{ job.status }}`
-
-      - name: Bump version and push tag
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        id: bump
-        uses: anothrNick/github-tag-action@1.75.0
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          WITH_V: true
-          DEFAULT_BUMP: patch
-          RELEASE_BRANCHES: main
-          TAG_PREFIX: v
-          # Version bump rules:
-          # - major: "major:" or "breaking:" in commit message → v(X+1).0.0
-          # - minor: "feat:" or "feature:" in commit message → vX.(Y+1).0
-          # - patch: "fix:" or "patch:" in commit message → vX.Y.(Z+1)
-          MAJOR_WORDS: major,breaking
-          MINOR_WORDS: feat,feature
-          PATCH_WORDS: fix,patch
-
-      - name: Create Release
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        uses: softprops/action-gh-release@v3
-        with:
-          name: Release ${{ steps.bump.outputs.tag }}
-          tag_name: ${{ steps.bump.outputs.tag }}
-          body: |
-            ## What's Changed
-            
-            This release includes:
-            - Test coverage: ${{ steps.coverage.outputs.coverage }}%
-            - Latest security updates
-            - Bug fixes and improvements
-            
-            For detailed changes, check the [commit history](https://github.com/${{ github.repository }}/commits).
-          draft: false
-          prerelease: false
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-
-      - name: "Installs and upgrades pip, installs other dependencies and installs the package from setup.py"
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          VERSION: ${{ steps.bump.outputs.tag }}
-        run: |
-          # Upgrade pip
-          python3 -m pip install --upgrade pip
-          # Install build deps
-          python3 -m pip install setuptools wheel twine
-          # If requirements.txt exists, install from it
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
-          # Install the package from setup.py
-          # Strip 'v' prefix from version for setup.py
-          VERSION=${VERSION#v}
-          echo "Building version: $VERSION"
-          python3 setup.py install
-
-      # Upload to PyPi
-      - name: Build and Upload to PyPi
-        if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-        env:
-          VERSION: ${{ steps.bump.outputs.tag }}
-          TWINE_USERNAME: __token__
-          TWINE_PASSWORD: ${{ secrets.PYPI_API_TOKEN }}
-        run: |
-          # Strip 'v' prefix from version for setup.py
-          VERSION=${VERSION#v}
-          echo "Building version: $VERSION"
-          python3 setup.py sdist bdist_wheel
-          ls -la dist/
-          python3 -m twine upload --verbose dist/*.whl dist/*.tar.gz
+  notify:
+    needs: [ci, docker_smoke, release, publish]
+    if: always() && github.ref == 'refs/heads/main' && github.event_name == 'push'
+    uses: ./.github/workflows/notify.yaml
+    with:
+      coverage: ${{ needs.ci.outputs.coverage }}
+      ci_result: ${{ needs.ci.result }}
+      docker_smoke_result: ${{ needs.docker_smoke.result }}
+      release_result: ${{ needs.release.result }}
+      publish_result: ${{ needs.publish.result }}
+    secrets: inherit
