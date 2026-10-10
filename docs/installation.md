@@ -60,6 +60,32 @@ To install PyWebGuard with TinyDB storage support:
 pip install pywebguard[tinydb]
 ```
 
+### MongoDB
+
+To install PyWebGuard with MongoDB storage support:
+
+```bash
+pip install pywebguard[mongodb]
+```
+
+### PostgreSQL
+
+To install PyWebGuard with PostgreSQL storage support:
+
+```bash
+pip install pywebguard[postgresql]
+```
+
+## Logging Backend Installation
+
+### Elasticsearch
+
+To install PyWebGuard with Elasticsearch logging support:
+
+```bash
+pip install pywebguard[elasticsearch]
+```
+
 ## Combined Installation
 
 ### All Storage Backends
