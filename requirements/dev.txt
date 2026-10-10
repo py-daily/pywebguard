@@ -8,3 +8,7 @@ black==26.5.1
 isort
 flake8
 mypy
+
+# Docs
+mkdocs==1.6.1
+mkdocs-material==9.6.14
