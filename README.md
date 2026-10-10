@@ -29,7 +29,7 @@
     <a href="https://pypi.org/project/pywebguard/"><img src="https://img.shields.io/pypi/pyversions/pywebguard.svg" alt="Python Versions"></a>
     <a href="https://github.com/py-daily/pywebguard/blob/main/LICENSE"><img src="https://img.shields.io/github/license/py-daily/pywebguard.svg" alt="License"></a>
     <a href="#contributors-"><img src="https://img.shields.io/badge/all_contributors-2-orange.svg?style=flat-square" alt="All Contributors"></a>
-    <a href="https://pepy.tech/project/pywebguard"><img src="https://pepy.tech/badge/pywebguard" alt="Downloads"></a>
+    <a href="https://pepy.tech/projects/pywebguard"><img src="https://static.pepy.tech/personalized-badge/pywebguard?period=total&units=INTERNATIONAL_SYSTEM&left_color=BLACK&right_color=GREEN&left_text=downloads" alt="PyPI Downloads"></a>
 </p>
 
 <p align="center">
