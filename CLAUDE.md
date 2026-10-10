@@ -24,10 +24,13 @@ does (see "Known issues" below). Don't assume a feature works because it's docum
   `dispatch()`, which is why they've drifted out of sync)
 - `pywebguard/utils/` — `ip.py` (`get_real_ip()` — proxy-header-aware IP extraction), `request.py`
 - `pywebguard/cli.py` — `init`/`interactive`/`validate`/`test`/`ban`/`status` commands (1022 lines,
-  the largest and least-tested module — several Redis code paths are broken, see #23)
+  the largest and least-tested module)
 - `tests/` — one file per module, 4500+ lines total. **Zero coverage on `pywebguard/logging/`.**
-- `docs/` and `docs_site/` (mkdocs-material) — two separate, drifting doc trees; neither is fully
-  wired into CI (see #30). Don't trust either blindly against the actual code.
+- `docs/` — the single docs source (plain Markdown), served as-is via GitHub Pages (classic
+  "Deploy from a branch" source, branch `main`, folder `/docs` — no build step, no workflow file).
+  There used to be a second, parallel `docs_site/` (mkdocs-material) tree that drifted out of sync
+  and was never actually deployed anywhere (#30); it's been removed in favor of this single tree.
+  Still don't blindly trust docs against the actual code — drift is easy here too.
 
 ## Commands
 
@@ -35,7 +38,7 @@ does (see "Known issues" below). Don't assume a feature works because it's docum
 pip install -e .
 pip install -r requirements.txt   # installs everything: all frameworks, all storage, all dev tools
 
-pytest tests/              # 193 tests
+pytest tests/              # 222 tests
 black --check .            # formatting (CI checks this — see below on the version pin)
 ```
 
@@ -75,8 +78,8 @@ black --check .            # formatting (CI checks this — see below on the ver
 
 ## Known issues (filed, several security-relevant — read before working near these areas)
 
-A full audit was done and 13 issues filed (#19–#31), one already fixed (#19). Highlights, since
-these are exactly the areas most likely to bite you if you don't already know about them:
+A full audit was done and 13 issues filed (#19–#31), two already fixed (#19, #23). Highlights,
+since these are exactly the areas most likely to bite you if you don't already know about them:
 
 - **`FastAPIGuard` re-implements security checks from scratch** in `dispatch()` instead of calling
   the shared `Guard.check_request()` that Flask uses — this is *why* Flask and FastAPI keep
@@ -86,8 +89,6 @@ these are exactly the areas most likely to bite you if you don't already know ab
 - **`Guard`'s auto-storage-creation is broken for Redis/SQLite/TinyDB** (#22) — passes constructor
   kwargs those classes don't accept. Don't assume `GuardConfig(storage=StorageConfig(type="redis"))`
   actually works without testing it first.
-- **The CLI's Redis commands reference nonexistent config attributes** (#23) — `config.storage.url`/
-  `prefix` are the real fields, not `redis_url`/`redis_prefix`.
 - **Elasticsearch/MongoDB logging backends are fully written but commented out** (#24) — don't
   assume "the code exists" means "the feature works." Check `logging/backends/__init__.py`'s actual
   imports.
@@ -96,8 +97,8 @@ these are exactly the areas most likely to bite you if you don't already know ab
   re-attempting the same trim.
 - See the full issue list on GitHub for the rest (#26–#31): nonexistent pip extras advertised in
   docs, a CORS config that allows a browser-rejected combination by default, a hardcoded wrong
-  `__version__`, a broken Code-of-Conduct link (fixed alongside this file), and unpublished/drifting
-  docs.
+  `__version__`, and MongoDB/PostgreSQL storage not exported from the top-level package (#31,
+  open — import from `pywebguard.storage._mongodb`/`_postgresql` until it's fixed).
 
 ## Issue-based backlog (no agent-backlog.md here — same pattern as doctoc)
 
