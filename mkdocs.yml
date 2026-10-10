@@ -1,0 +1,66 @@
+site_name: PyWebGuard
+site_description: Secure your Python web apps with PyWebGuard.
+site_url: https://py-daily.github.io/pywebguard/
+repo_url: https://github.com/py-daily/pywebguard
+repo_name: py-daily/pywebguard
+
+theme:
+  name: material
+  language: en
+  features:
+    - navigation.tabs
+    - navigation.top
+    - navigation.sections
+    - navigation.footer
+    - navigation.instant
+    - navigation.indexes
+    - search.highlight
+    - content.code.annotate
+    - content.tabs.link
+  palette:
+    - scheme: default
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-night
+        name: Switch to dark mode
+    - scheme: slate
+      primary: deep purple
+      accent: indigo
+      toggle:
+        icon: material/weather-sunny
+        name: Switch to light mode
+
+nav:
+  - Home: index.md
+  - Installation: installation.md
+  - CLI: cli.md
+  - Core:
+      - Overview: core/index.md
+      - Guard Classes: core/guard.md
+      - Configuration: core/config.md
+  - Frameworks:
+      - Overview: frameworks/index.md
+      - FastAPI: frameworks/fastapi.md
+      - Flask: frameworks/flask.md
+  - Storage:
+      - Overview: storage/index.md
+      - Memory: storage/memory.md
+      - Redis: storage/redis.md
+      - SQLite: storage/sqlite.md
+      - TinyDB: storage/tinydb.md
+      - MongoDB: storage/mongodb.md
+      - PostgreSQL: storage/postgresql.md
+
+markdown_extensions:
+  - admonition
+  - footnotes
+  - toc:
+      permalink: true
+  - pymdownx.superfences
+  - pymdownx.tabbed
+  - pymdownx.highlight
+  - pymdownx.inlinehilite
+
+plugins:
+  - search

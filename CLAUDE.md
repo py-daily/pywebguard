@@ -26,11 +26,14 @@ does (see "Known issues" below). Don't assume a feature works because it's docum
 - `pywebguard/cli.py` — `init`/`interactive`/`validate`/`test`/`ban`/`status` commands (1022 lines,
   the largest and least-tested module)
 - `tests/` — one file per module, 4500+ lines total. **Zero coverage on `pywebguard/logging/`.**
-- `docs/` — the single docs source (plain Markdown), served as-is via GitHub Pages (classic
-  "Deploy from a branch" source, branch `main`, folder `/docs` — no build step, no workflow file).
-  There used to be a second, parallel `docs_site/` (mkdocs-material) tree that drifted out of sync
-  and was never actually deployed anywhere (#30); it's been removed in favor of this single tree.
-  Still don't blindly trust docs against the actual code — drift is easy here too.
+- `docs/` — the single docs source (plain Markdown). Rendered with `mkdocs-material` via the
+  root-level `mkdocs.yml` (`docs_dir` defaults to `docs/`, so content lives in one place) and
+  deployed to GitHub Pages by `.github/workflows/docs.yaml` on every push to `main` that touches
+  `docs/**` or `mkdocs.yml` (Pages source is set to "GitHub Actions", not branch-based). There
+  used to be a second, parallel `docs_site/` tree with its own duplicate mkdocs setup that drifted
+  out of sync and was never actually deployed anywhere (#30); it's been removed in favor of this
+  single tree + root `mkdocs.yml`. Still don't blindly trust docs against the actual code — drift
+  is easy here too.
 
 ## Commands
 
