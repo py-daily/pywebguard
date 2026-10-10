@@ -31,9 +31,8 @@ if result["allowed"]:
     # Process the request
     pass
 else:
-    # Block the request
-    reason = result["details"]
-    print(f"Request blocked: {reason}")
+    # Block the request — details is {"type": ..., "reason": ...}
+    print(f"Request blocked: {result['details']['type']} — {result['details']['reason']}")
 ```
 
 ### API Reference
@@ -90,9 +89,8 @@ if result["allowed"]:
     # Process the request
     pass
 else:
-    # Block the request
-    reason = result["details"]
-    print(f"Request blocked: {reason}")
+    # Block the request — details is {"type": ..., "reason": ...}
+    print(f"Request blocked: {result['details']['type']} — {result['details']['reason']}")
 ```
 
 ### API Reference
@@ -184,8 +182,7 @@ Each component can be configured through the `GuardConfig` object.
 ## Example with Custom Storage
 
 ```python
-from pywebguard import Guard, GuardConfig
-from pywebguard.storage._redis import RedisStorage
+from pywebguard import Guard, GuardConfig, RedisStorage
 
 # Create Redis storage
 storage = RedisStorage(url="redis://localhost:6379/0")

@@ -23,8 +23,7 @@ pip install pywebguard[sqlite]
 ### Synchronous Usage
 
 ```python
-from pywebguard import Guard, GuardConfig
-from pywebguard.storage._sqlite import SQLiteStorage
+from pywebguard import Guard, GuardConfig, SQLiteStorage
 
 # Create SQLite storage (file-based)
 storage = SQLiteStorage(
@@ -45,8 +44,7 @@ guard = Guard(config=GuardConfig(), storage=storage)
 ### Asynchronous Usage
 
 ```python
-from pywebguard import AsyncGuard, GuardConfig
-from pywebguard.storage._sqlite import AsyncSQLiteStorage
+from pywebguard import AsyncGuard, GuardConfig, AsyncSQLiteStorage
 
 # Create async SQLite storage
 storage = AsyncSQLiteStorage(
@@ -62,8 +60,12 @@ guard = AsyncGuard(config=GuardConfig(), storage=storage)
 
 The SQLite storage backend accepts the following parameters:
 
-- `db_path`: Path to SQLite database file (default: ":memory:")
-- `table_name`: Name of the table to store values (default: "pywebguard")
+- `db_path`: Path to SQLite database file (default: `":memory:"`)
+- `table_name`: Name of the table to store values (default: `"pywebguard"`)
+- `check_same_thread`: Passed to `sqlite3.connect()`; set `False` if you access the same
+  connection from multiple threads (default: `True`)
+- `ttl`: Default TTL for stored values in seconds, used when `set`/`increment` are called without
+  an explicit `ttl` (default: `3600`)
 
 ## API Reference
 
@@ -71,7 +73,13 @@ The SQLite storage backend accepts the following parameters:
 
 ```python
 class SQLiteStorage:
-    def __init__(self, db_path: str = ":memory:", table_name: str = "pywebguard"):
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        table_name: str = "pywebguard",
+        check_same_thread: bool = True,
+        ttl: int = 3600,
+    ):
         """Initialize the SQLite storage."""
         
     def get(self, key: str) -> Optional[Any]:
@@ -97,7 +105,13 @@ class SQLiteStorage:
 
 ```python
 class AsyncSQLiteStorage:
-    def __init__(self, db_path: str = ":memory:", table_name: str = "pywebguard"):
+    def __init__(
+        self,
+        db_path: str = ":memory:",
+        table_name: str = "pywebguard",
+        check_same_thread: bool = True,
+        ttl: int = 3600,
+    ):
         """Initialize the async SQLite storage."""
         
     async def get(self, key: str) -> Optional[Any]:

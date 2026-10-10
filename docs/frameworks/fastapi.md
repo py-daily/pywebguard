@@ -2,6 +2,13 @@
 
 PyWebGuard provides a middleware for FastAPI that adds security features to your application.
 
+!!! warning
+    `FastAPIGuard` currently reads the client IP from `request.client.host` directly — it does
+    not look at `X-Forwarded-For` or similar proxy headers. If your app sits behind a reverse
+    proxy or load balancer, IP whitelisting/blacklisting and rate limiting will key off the
+    proxy's IP, not the real client IP, until this is fixed upstream. (The same is true of
+    `FlaskGuard`.)
+
 ## Installation
 
 To use PyWebGuard with FastAPI, install the FastAPI extra:
@@ -40,6 +47,8 @@ The `FastAPIGuard` middleware accepts the following parameters:
 - `config`: A `GuardConfig` object with security settings
 - `storage`: An optional storage backend (defaults to in-memory storage)
 - `route_rate_limits`: An optional list of dictionaries with route-specific rate limits
+- `custom_response_handler`: An optional async callable `(request, reason: str) -> Response` to
+  replace the default JSON error response for blocked requests
 
 ### Route-Specific Rate Limits
 
@@ -78,8 +87,7 @@ The endpoint patterns support wildcards:
 You can use a custom storage backend:
 
 ```python
-from pywebguard import FastAPIGuard, GuardConfig
-from pywebguard.storage._redis import AsyncRedisStorage
+from pywebguard import FastAPIGuard, GuardConfig, AsyncRedisStorage
 
 app = FastAPI()
 
@@ -92,24 +100,26 @@ guard = FastAPIGuard(app, config=config, storage=storage)
 
 ## Error Responses
 
-When a request is blocked by PyWebGuard, a JSON response is returned with a 403 status code:
+When a request is blocked, PyWebGuard returns a JSON response — status `429` if the block reason
+mentions a rate limit, `403` otherwise:
 
 ```json
 {
-  "detail": "Request blocked by security policy",
-  "reason": {
-    "type": "Rate limit",
-    "reason": "Rate limit exceeded for /api/limited"
-  }
+  "error": "Request blocked",
+  "reason": "Rate limit exceeded",
+  "timestamp": 1718030400.123,
+  "path": "/api/limited",
+  "method": "GET"
 }
 ```
+
+Pass `custom_response_handler` to `FastAPIGuard` if you need a different response shape.
 
 ## Complete Example
 
 ```python
 from fastapi import FastAPI, Request, Depends
-from pywebguard import FastAPIGuard, GuardConfig, RateLimitConfig
-from pywebguard.storage._redis import AsyncRedisStorage
+from pywebguard import FastAPIGuard, GuardConfig, RateLimitConfig, AsyncRedisStorage
 
 # Create FastAPI app
 app = FastAPI(title="PyWebGuard FastAPI Example")

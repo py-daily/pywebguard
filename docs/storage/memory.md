@@ -55,8 +55,8 @@ class MemoryStorage:
     def delete(self, key: str) -> None:
         """Delete a value from storage."""
         
-    def increment(self, key: str, amount: int = 1) -> int:
-        """Increment a counter in storage."""
+    def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
+        """Increment a counter in storage, with optional TTL in seconds."""
         
     def exists(self, key: str) -> bool:
         """Check if a key exists in storage."""
@@ -75,14 +75,14 @@ class AsyncMemoryStorage:
     async def get(self, key: str) -> Optional[Any]:
         """Get a value from storage asynchronously."""
         
-    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> bool:
+    async def set(self, key: str, value: Any, ttl: Optional[int] = None) -> None:
         """Set a value in storage asynchronously with optional TTL in seconds."""
         
-    async def delete(self, key: str) -> bool:
+    async def delete(self, key: str) -> None:
         """Delete a value from storage asynchronously."""
         
-    async def increment(self, key: str, amount: int = 1) -> int:
-        """Increment a counter in storage asynchronously."""
+    async def increment(self, key: str, amount: int = 1, ttl: Optional[int] = None) -> int:
+        """Increment a counter in storage asynchronously, with optional TTL in seconds."""
         
     async def exists(self, key: str) -> bool:
         """Check if a key exists in storage asynchronously."""
