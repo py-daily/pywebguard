@@ -4,11 +4,11 @@ pytest-asyncio
 pytest-cov
 
 # Code quality
-black==26.5.1
+black==26.10.0
 isort
 flake8
 mypy
 
 # Docs
 mkdocs==1.6.1
-mkdocs-material==9.6.14
+mkdocs-material==9.7.7
