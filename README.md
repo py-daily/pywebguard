@@ -151,7 +151,7 @@ config = GuardConfig(
         "requests_per_minute": 100,
         "burst_size": 20,
         "auto_ban_threshold": 200,
-        "auto_ban_duration": 3600,  # 1 hour in seconds
+        "auto_ban_duration_minutes": 60,  # 1 hour
         "excluded_paths": ["/ready", "/healthz"]
     },
     user_agent={
@@ -194,20 +194,20 @@ route_rate_limits = [
         "requests_per_minute": 5,
         "burst_size": 2,
         "auto_ban_threshold": 10,
-        "auto_ban_duration": 1800,  # 30 minutes
+        "auto_ban_duration_minutes": 30,
     },
     {
         "endpoint": "/api/uploads/*",
         "requests_per_minute": 10,
         "burst_size": 5,
-        "auto_ban_duration": 1800,
+        "auto_ban_duration_minutes": 30,
     },
     {
         "endpoint": "/api/admin/**",
         "requests_per_minute": 20,
         "burst_size": 5,
         "auto_ban_threshold": 50,
-        "auto_ban_duration": 7200,  # 2 hours
+        "auto_ban_duration_minutes": 120,  # 2 hours
     },
 ]
 

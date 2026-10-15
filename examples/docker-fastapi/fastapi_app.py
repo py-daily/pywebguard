@@ -42,7 +42,7 @@ route_rate_limits = [
         "requests_per_minute": 5,
         "burst_size": 2,
         "auto_ban_threshold": 10,
-        "auto_ban_duration": 1800,  # 30 minutes
+        "auto_ban_duration_minutes": 30,
     },
 ]
 

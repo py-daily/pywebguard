@@ -8,7 +8,7 @@ penetration detection, CORS, logging, and storage.
 
 import os
 from typing import List, Dict, Any, Optional, Union, Set
-from pydantic import BaseModel, Field, field_validator, ValidationInfo
+from pydantic import BaseModel, ConfigDict, Field, field_validator, ValidationInfo
 
 from .constants import PENETRATION_DETECTION_SUSPICIOUS_PATTERNS
 
@@ -67,6 +67,8 @@ class RateLimitConfig(BaseModel):
         auto_ban_threshold: Number of violations before auto-ban
         auto_ban_duration_minutes: Duration of auto-ban in minutes
     """
+
+    model_config = ConfigDict(extra="forbid")
 
     enabled: bool = True
     requests_per_minute: int = Field(default=60, ge=1)
