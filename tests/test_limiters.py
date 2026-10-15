@@ -4,6 +4,8 @@ import pytest
 import time
 from typing import Dict, Any, cast
 
+from pydantic import ValidationError
+
 from pywebguard.limiters.rate_limit import RateLimiter, AsyncRateLimiter
 from pywebguard.core.config import RateLimitConfig
 from pywebguard.storage.memory import MemoryStorage, AsyncMemoryStorage
@@ -252,6 +254,37 @@ class TestRateLimiter:
         assert result["allowed"] is True
         assert result["remaining"] != -1
         assert result["reset"] != -1
+
+
+class TestRateLimitConfig:
+    """Tests for RateLimitConfig field validation (issue #22)."""
+
+    def test_auto_ban_duration_typo_is_rejected(self):
+        """A README-style typo ("auto_ban_duration" instead of the real
+        "auto_ban_duration_minutes" field) must raise instead of being
+        silently dropped."""
+        with pytest.raises(ValidationError):
+            RateLimitConfig(
+                requests_per_minute=100,
+                burst_size=20,
+                auto_ban_threshold=200,
+                auto_ban_duration=3600,
+            )
+
+    def test_readme_quick_start_rate_limit_config(self):
+        """The README's Quick Start example config must actually set the
+        1 hour auto-ban duration it documents."""
+        config = RateLimitConfig(
+            **{
+                "enabled": True,
+                "requests_per_minute": 100,
+                "burst_size": 20,
+                "auto_ban_threshold": 200,
+                "auto_ban_duration_minutes": 60,  # 1 hour
+                "excluded_paths": ["/ready", "/healthz"],
+            }
+        )
+        assert config.auto_ban_duration_minutes == 60
 
 
 class TestAsyncRateLimiter:

@@ -125,7 +125,7 @@ route_rate_limits = [
         "requests_per_minute": 10,  # More strict rate limit for sensitive endpoint
         "burst_size": 2,
         "auto_ban_threshold": 20,
-        "auto_ban_duration": 7200,  # 2 hours
+        "auto_ban_duration_minutes": 120,  # 2 hours
     }
 ]
 

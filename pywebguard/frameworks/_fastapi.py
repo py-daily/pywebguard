@@ -84,8 +84,7 @@ class FastAPIGuard(BaseHTTPMiddleware):
 
         # Add route-specific rate limits if provided
         if route_rate_limits:
-            for route in route_rate_limits:
-                self.guard.rate_limiter.add_route_config(route["endpoint"], route)
+            self.guard.add_route_rate_limits(route_rate_limits)
 
         # Set up default response handler if none provided
         if custom_response_handler is None:
