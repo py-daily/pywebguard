@@ -82,7 +82,7 @@ setup(
             "pytest>=7.0.0",
             "pytest-cov>=6.1.1",
             "pytest-asyncio>=0.26.0",
-            "black==26.10.0",
+            "black==26.10.1",
             "isort>=6.0.1",
             "mypy>=1.15.0",
             "flake8>=7.2.0",
