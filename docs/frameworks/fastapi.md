@@ -17,6 +17,40 @@ To use PyWebGuard with FastAPI, install the FastAPI extra:
 pip install pywebguard[fastapi]
 ```
 
+## Short Setup
+
+`FastAPIGuard.install()` adds the middleware with a few flat options:
+
+```python
+from fastapi import FastAPI
+from pywebguard import FastAPIGuard
+
+app = FastAPI()
+
+FastAPIGuard.install(
+    app,
+    rate_limit="100/minute",
+    route_limits={"/api/limited": "5/minute", "/api/admin/**": "20/minute"},
+    blocked_agents=["curl", "wget", "bot"],
+    ip_blacklist=["10.0.0.1", "172.16.0.0/16"],
+)
+```
+
+| Option | Meaning |
+|--------|---------|
+| `rate_limit` | Default rate, `"<count>/second"` or `"<count>/minute"` |
+| `route_limits` | Per-route rates; `*` and `**` patterns work as in `route_rate_limits` |
+| `blocked_agents` | User-agent substrings to block |
+| `ip_whitelist` / `ip_blacklist` | IPs or CIDR ranges |
+| `cors_origins` | Allowed CORS origins |
+| `storage` | Async storage backend (in-memory if omitted) |
+| `config` | A full `GuardConfig` or dict, instead of the flat options |
+
+- Only rate limiting is on by default. IP filtering, user-agent filtering and CORS turn on when you pass their option; penetration detection stays off. Use `config=` for full control.
+- A rate string means exactly that rate (burst is disabled). For burst or auto-ban settings use `route_rate_limits` with `app.add_middleware(...)`.
+- Without `storage`, counters and bans live in memory and are per-process. A warning is emitted; use Redis or another shared storage with multiple workers.
+- Combining `config=` with the flat options raises a `ValueError`.
+
 ## Basic Usage
 
 ```python
@@ -31,8 +65,8 @@ config = GuardConfig(
     rate_limit={"requests_per_minute": 100}
 )
 
-# Add PyWebGuard middleware
-guard = FastAPIGuard(app, config=config)
+# Add PyWebGuard middleware (storage defaults to in-memory)
+app.add_middleware(FastAPIGuard, config=config)
 
 @app.get("/")
 async def root():
