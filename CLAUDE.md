@@ -48,7 +48,7 @@ black --check .            # formatting (CI checks this — see below on the ver
 
 ## Conventions
 
-- **Formatting**: Black, pinned to `26.5.1` exactly in `requirements/dev.txt` and `setup.py`'s
+- **Formatting**: Black, pinned to `26.10.1` exactly in `requirements/dev.txt` and `setup.py`'s
   `dev` extra, and in CI (`.github/workflows/ci.yaml`). **Don't loosen this pin** — this repo
   already broke once from an unpinned `black>=25.1.0` combined with a CI step that installed its
   own floating, unpinned Black version, causing CI to fail on files nobody had touched. If Black
