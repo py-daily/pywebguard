@@ -31,6 +31,7 @@ except ImportError:
 from pywebguard.core.base import Guard
 from pywebguard.core.config import GuardConfig
 from pywebguard.storage.base import BaseStorage
+from pywebguard.utils.setup import build_install_config, route_limits_to_list
 
 
 class FlaskGuard:
@@ -44,7 +45,7 @@ class FlaskGuard:
     def __init__(
         self,
         app: Optional[Flask] = None,
-        config: Optional[GuardConfig] = None,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
         storage: Optional[BaseStorage] = None,
         route_rate_limits: Optional[List[Dict[str, Any]]] = None,
         custom_response_handler: Optional[Callable] = None,
@@ -82,6 +83,62 @@ class FlaskGuard:
 
         if app is not None:
             self.init_app(app)
+
+    @classmethod
+    def install(
+        cls,
+        app: Flask,
+        *,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
+        storage: Optional[BaseStorage] = None,
+        rate_limit: Optional[str] = None,
+        route_limits: Optional[Dict[str, str]] = None,
+        blocked_agents: Optional[List[str]] = None,
+        ip_whitelist: Optional[List[str]] = None,
+        ip_blacklist: Optional[List[str]] = None,
+        cors_origins: Optional[List[str]] = None,
+        custom_response_handler: Optional[Callable] = None,
+    ) -> "FlaskGuard":
+        """
+        Add the guard to a Flask app with a short, flat set of options.
+
+        Only rate limiting is on by default; IP filtering, user-agent filtering
+        and CORS turn on when their option is passed, and penetration detection
+        stays off. Use ``FlaskGuard(app, config=...)`` for full control.
+
+        Args:
+            app: The Flask application
+            config: Full configuration; cannot be combined with the flat options
+            storage: Storage backend (in-memory if omitted)
+            rate_limit: Default rate, e.g. "100/minute" or "5/second"
+            route_limits: Per-route rates, e.g. {"/api/admin/**": "20/minute"}
+            blocked_agents: User-agent substrings to block
+            ip_whitelist: IPs or CIDR ranges to allow
+            ip_blacklist: IPs or CIDR ranges to block
+            cors_origins: Allowed CORS origins
+            custom_response_handler: Optional custom response handler for blocked requests
+
+        Returns:
+            The FlaskGuard extension that was registered on the app
+
+        Raises:
+            ValueError: If flat options are combined with config, or a rate is invalid
+        """
+        guard_config = build_install_config(
+            config=config,
+            rate_limit=rate_limit,
+            blocked_agents=blocked_agents,
+            ip_whitelist=ip_whitelist,
+            ip_blacklist=ip_blacklist,
+            cors_origins=cors_origins,
+        )
+        return cls(
+            app,
+            config=guard_config,
+            storage=storage,
+            route_rate_limits=route_limits_to_list(route_limits or {}),
+            custom_response_handler=custom_response_handler,
+        )
 
     def _default_response_handler(self, request, reason: str) -> Response:
         """

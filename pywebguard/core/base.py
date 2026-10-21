@@ -151,7 +151,7 @@ class Guard:
 
     def __init__(
         self,
-        config: Optional[GuardConfig] = None,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
         storage: Optional[BaseStorage] = None,
         route_rate_limits: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
@@ -159,7 +159,7 @@ class Guard:
         Initialize the Guard with configuration and storage.
 
         Args:
-            config: GuardConfig object with security settings. If None, default config is used.
+            config: GuardConfig object (or a dict validated into one) with security settings. If None, default config is used.
             storage: Storage backend for persistent data. If None, storage is determined from config.
             route_rate_limits: List of dictionaries with route-specific rate limits.
                 Each dict should have: endpoint, requests_per_minute, burst_size, auto_ban_threshold (optional)
@@ -170,6 +170,8 @@ class Guard:
         # Use environment variables if no config is provided
         if config is None:
             config = GuardConfig.from_env()
+        elif isinstance(config, dict):
+            config = GuardConfig.model_validate(config)
         self.config = config
 
         # Initialize storage
@@ -484,7 +486,7 @@ class AsyncGuard:
 
     def __init__(
         self,
-        config: Optional[GuardConfig] = None,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
         storage: Optional[AsyncBaseStorage] = None,
         route_rate_limits: Optional[List[Dict[str, Any]]] = None,
     ) -> None:
@@ -492,7 +494,7 @@ class AsyncGuard:
         Initialize the AsyncGuard with configuration and storage.
 
         Args:
-            config: GuardConfig object with security settings. If None, default config is used.
+            config: GuardConfig object (or a dict validated into one) with security settings. If None, default config is used.
             storage: Async storage backend for persistent data. If None, storage is determined from config.
             route_rate_limits: List of dictionaries with route-specific rate limits.
                 Each dict should have: endpoint, requests_per_minute, burst_size, auto_ban_threshold (optional)
@@ -503,6 +505,8 @@ class AsyncGuard:
         # Use environment variables if no config is provided
         if config is None:
             config = GuardConfig.from_env()
+        elif isinstance(config, dict):
+            config = GuardConfig.model_validate(config)
         self.config = config
 
         # Initialize storage

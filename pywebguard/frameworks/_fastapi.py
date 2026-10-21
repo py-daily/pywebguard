@@ -10,6 +10,7 @@ Classes:
 
 from typing import Callable, Dict, Any, Optional, List, Union
 import time
+import warnings
 
 # Check if FastAPI is installed
 try:
@@ -40,6 +41,10 @@ from pywebguard.core.base import Guard, AsyncGuard
 from pywebguard.core.config import GuardConfig
 from pywebguard.storage.base import BaseStorage, AsyncBaseStorage
 from pywebguard.storage.memory import MemoryStorage, AsyncMemoryStorage
+from pywebguard.utils.setup import (
+    build_install_config,
+    route_limits_to_list,
+)
 
 
 class FastAPIGuard(BaseHTTPMiddleware):
@@ -50,7 +55,7 @@ class FastAPIGuard(BaseHTTPMiddleware):
     def __init__(
         self,
         app,
-        config: Optional[GuardConfig] = None,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
         storage: Optional[Union[AsyncBaseStorage, BaseStorage]] = None,
         route_rate_limits: Optional[List[Dict[str, Any]]] = None,
         custom_response_handler: Optional[Callable] = None,
@@ -60,8 +65,9 @@ class FastAPIGuard(BaseHTTPMiddleware):
 
         Args:
             app: The FastAPI application
-            config: Guard configuration
-            storage: Storage backend
+            config: Guard configuration (a GuardConfig or a dict)
+            storage: Async storage backend. If None, it is created from the config
+                (in-memory by default, which is per-process)
             route_rate_limits: Optional list of route-specific rate limits
             custom_response_handler: Optional custom response handler for blocked requests
         """
@@ -75,11 +81,18 @@ class FastAPIGuard(BaseHTTPMiddleware):
         self.app = app
 
         # Use AsyncGuard instead of Guard
-        if isinstance(storage, AsyncBaseStorage):
-            self.guard = AsyncGuard(config, storage)
-        else:
+        if storage is not None and not isinstance(storage, AsyncBaseStorage):
             raise ValueError(
                 "Storage must be an instance of AsyncBaseStorage for FastAPI integration"
+            )
+        self.guard = AsyncGuard(config, storage)
+        if storage is None and isinstance(self.guard.storage, AsyncMemoryStorage):
+            warnings.warn(
+                "No storage given, using in-memory storage. Rate-limit counters and "
+                "bans are per-process; use Redis or another shared storage with "
+                "multiple workers.",
+                UserWarning,
+                stacklevel=2,
             )
 
         # Add route-specific rate limits if provided
@@ -90,6 +103,59 @@ class FastAPIGuard(BaseHTTPMiddleware):
         if custom_response_handler is None:
             custom_response_handler = self._default_response_handler
         self.custom_response_handler = custom_response_handler
+
+    @classmethod
+    def install(
+        cls,
+        app: "FastAPI",
+        *,
+        config: Optional[Union[GuardConfig, Dict[str, Any]]] = None,
+        storage: Optional[Union[AsyncBaseStorage, BaseStorage]] = None,
+        rate_limit: Optional[str] = None,
+        route_limits: Optional[Dict[str, str]] = None,
+        blocked_agents: Optional[List[str]] = None,
+        ip_whitelist: Optional[List[str]] = None,
+        ip_blacklist: Optional[List[str]] = None,
+        cors_origins: Optional[List[str]] = None,
+        custom_response_handler: Optional[Callable] = None,
+    ) -> None:
+        """
+        Add the guard to a FastAPI app with a short, flat set of options.
+
+        Only rate limiting is on by default; IP filtering, user-agent filtering
+        and CORS turn on when their option is passed, and penetration detection
+        stays off. Use ``app.add_middleware(FastAPIGuard, ...)`` for full control.
+
+        Args:
+            app: The FastAPI application
+            config: Full configuration; cannot be combined with the flat options
+            storage: Async storage backend (in-memory if omitted)
+            rate_limit: Default rate, e.g. "100/minute" or "5/second"
+            route_limits: Per-route rates, e.g. {"/api/admin/**": "20/minute"}
+            blocked_agents: User-agent substrings to block
+            ip_whitelist: IPs or CIDR ranges to allow
+            ip_blacklist: IPs or CIDR ranges to block
+            cors_origins: Allowed CORS origins
+            custom_response_handler: Optional custom response handler for blocked requests
+
+        Raises:
+            ValueError: If flat options are combined with config, or a rate is invalid
+        """
+        guard_config = build_install_config(
+            config=config,
+            rate_limit=rate_limit,
+            blocked_agents=blocked_agents,
+            ip_whitelist=ip_whitelist,
+            ip_blacklist=ip_blacklist,
+            cors_origins=cors_origins,
+        )
+        app.add_middleware(
+            cls,
+            config=guard_config,
+            storage=storage,
+            route_rate_limits=route_limits_to_list(route_limits or {}),
+            custom_response_handler=custom_response_handler,
+        )
 
     async def _default_response_handler(
         self, request: Request, reason: str
