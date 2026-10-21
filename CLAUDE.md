@@ -22,7 +22,8 @@ does (see "Known issues" below). Don't assume a feature works because it's docum
 - `pywebguard/frameworks/` — `_fastapi.py`, `_flask.py` (two independent implementations, not a
   shared code path — Flask uses `Guard.check_request()`, FastAPI hand-rolls its own checks in
   `dispatch()`, which is why they've drifted out of sync)
-- `pywebguard/utils/` — `ip.py` (`get_real_ip()` — proxy-header-aware IP extraction), `request.py`
+- `pywebguard/utils/` — `ip.py` (`get_real_ip()` — proxy-header-aware IP extraction), `request.py`,
+  `setup.py` (rate-string parsing + config building behind `FastAPIGuard.install()`/`FlaskGuard.install()`)
 - `pywebguard/cli.py` — `init`/`interactive`/`validate`/`test`/`ban`/`status` commands (1022 lines,
   the largest and least-tested module)
 - `tests/` — one file per module, 4500+ lines total. **Zero coverage on `pywebguard/logging/`.**
@@ -41,7 +42,7 @@ does (see "Known issues" below). Don't assume a feature works because it's docum
 pip install -e .
 pip install -r requirements.txt   # installs everything: all frameworks, all storage, all dev tools
 
-pytest tests/              # 222 tests
+pytest tests/              # 266 tests
 black --check .            # formatting (CI checks this — see below on the version pin)
 ```
 

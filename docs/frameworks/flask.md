@@ -16,6 +16,40 @@ To use PyWebGuard with Flask, install the Flask extra:
 pip install pywebguard[flask]
 ```
 
+## Short Setup
+
+`FlaskGuard.install()` registers the extension and returns it with a few flat options:
+
+```python
+from flask import Flask
+from pywebguard import FlaskGuard
+
+app = Flask(__name__)
+
+FlaskGuard.install(
+    app,
+    rate_limit="100/minute",
+    route_limits={"/api/limited": "5/minute", "/api/admin/**": "20/minute"},
+    blocked_agents=["curl", "wget", "bot"],
+    ip_blacklist=["10.0.0.1", "172.16.0.0/16"],
+)
+```
+
+| Option | Meaning |
+|--------|---------|
+| `rate_limit` | Default rate, `"<count>/second"` or `"<count>/minute"` |
+| `route_limits` | Per-route rates; `*` and `**` patterns work as in `route_rate_limits` |
+| `blocked_agents` | User-agent substrings to block |
+| `ip_whitelist` / `ip_blacklist` | IPs or CIDR ranges |
+| `cors_origins` | Allowed CORS origins |
+| `storage` | Storage backend (in-memory if omitted) |
+| `config` | A full `GuardConfig` or dict, instead of the flat options |
+
+- Only rate limiting is on by default. IP filtering, user-agent filtering and CORS turn on when you pass their option; penetration detection stays off. Use `config=` for full control.
+- A rate string means exactly that rate (burst is disabled). For burst or auto-ban settings use `FlaskGuard(app, config=..., route_rate_limits=[...])`.
+- Without `storage`, counters and bans live in memory and are per-process; use Redis or another shared storage with multiple workers.
+- Combining `config=` with the flat options raises a `ValueError`.
+
 ## Basic Usage
 
 ```python

@@ -128,7 +128,28 @@ pip install pywebguard[all]
 
 ## Quick Start
 
-Here's a basic example using FastAPI:
+The short way, with a few flat options (FastAPI shown; `FlaskGuard.install(app, ...)` takes the same ones):
+
+```python
+from fastapi import FastAPI
+from pywebguard import FastAPIGuard
+
+app = FastAPI()
+
+FastAPIGuard.install(
+    app,
+    rate_limit="100/minute",
+    route_limits={"/api/limited": "5/minute", "/api/admin/**": "20/minute"},
+    blocked_agents=["curl", "wget", "bot"],
+    ip_blacklist=["10.0.0.1", "172.16.0.0/16"],
+)
+```
+
+Only rate limiting is on by default; the other features turn on when you pass their option. Without `storage`, state lives in memory and is per-process, so use Redis or another shared storage with multiple workers. See the [FastAPI](https://py-daily.github.io/pywebguard/frameworks/fastapi/) and [Flask](https://py-daily.github.io/pywebguard/frameworks/flask/) guides for every option.
+
+### Full configuration
+
+For full control, build a `GuardConfig` and add the middleware yourself. Here is an example using FastAPI:
 
 ```python
 from fastapi import FastAPI
