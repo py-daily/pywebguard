@@ -5,12 +5,15 @@ from datetime import datetime
 from typing import Dict, Any, cast
 from unittest.mock import MagicMock, patch
 
+from pydantic import ValidationError
+
 from pywebguard.core.base import Guard, AsyncGuard
 from pywebguard.core.config import (
     GuardConfig,
     IPFilterConfig,
     RateLimitConfig,
     StorageConfig,
+    CORSConfig,
 )
 from pywebguard.storage._redis import REDIS_AVAILABLE, RedisStorage, AsyncRedisStorage
 from pywebguard.storage._sqlite import (
@@ -545,3 +548,28 @@ async def test_async_guard_auto_creates_postgresql_storage():
     assert isinstance(guard.storage, AsyncPostgreSQLStorage)
     assert guard.storage.table_name == "custom_table"
     assert guard.storage.ttl == 120
+
+
+def test_cors_config_rejects_credentials_with_default_wildcard_origin():
+    """CORSConfig should raise when allow_credentials=True keeps allow_origins at the
+    default ["*"] — browsers reject that header combination outright."""
+    with pytest.raises(ValidationError, match="allow_credentials"):
+        CORSConfig(allow_credentials=True)
+
+
+def test_cors_config_allows_credentials_with_explicit_origins():
+    """CORSConfig should accept allow_credentials=True once allow_origins is overridden
+    to an explicit, non-wildcard list."""
+    config = CORSConfig(allow_credentials=True, allow_origins=["https://example.com"])
+
+    assert config.allow_credentials is True
+    assert config.allow_origins == ["https://example.com"]
+
+
+def test_cors_config_default_without_credentials_is_unaffected():
+    """The default CORSConfig (allow_credentials=False, allow_origins=["*"]) should
+    continue to construct without error."""
+    config = CORSConfig()
+
+    assert config.allow_credentials is False
+    assert config.allow_origins == ["*"]
