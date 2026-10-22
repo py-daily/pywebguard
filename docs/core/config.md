@@ -220,8 +220,10 @@ cors_dict = {
 !!! warning
     Don't set `allow_credentials=True` while leaving `allow_origins` as the default `["*"]`.
     Browsers reject that combination outright (a wildcard origin can't be paired with
-    credentials), so the request will fail client-side regardless of what the server sends.
-    Set `allow_origins` to your actual origin(s) whenever `allow_credentials=True`, as in the
+    credentials), so the request would fail client-side regardless of what the server sends.
+    `CORSConfig` validates this at construction time and raises a `ValueError` if
+    `allow_credentials=True` is combined with the default `allow_origins=["*"]`. Set
+    `allow_origins` to your actual origin(s) whenever `allow_credentials=True`, as in the
     example above.
 
 ## Logging Configuration

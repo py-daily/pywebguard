@@ -131,6 +131,36 @@ class CORSConfig(BaseModel):
     allow_credentials: bool = False
     max_age: int = Field(default=600, ge=0)
 
+    @field_validator("allow_credentials")
+    def validate_credentials_origin_combination(
+        cls, v: bool, info: ValidationInfo
+    ) -> bool:
+        """Reject allow_credentials=True paired with the default wildcard allow_origins.
+
+        Browsers unconditionally reject a response carrying both
+        `Access-Control-Allow-Origin: *` and `Access-Control-Allow-Credentials: true`,
+        so a config that would produce that combination fails fast here instead of
+        silently failing client-side.
+
+        Args:
+            v: The allow_credentials value being validated
+            info: Validation context, used to read the already-validated allow_origins
+
+        Returns:
+            The validated allow_credentials value
+
+        Raises:
+            ValueError: If allow_credentials is True while allow_origins is still the
+                default wildcard ["*"]
+        """
+        if v and info.data.get("allow_origins") == ["*"]:
+            raise ValueError(
+                "allow_credentials=True cannot be combined with the default wildcard "
+                "allow_origins=['*']: browsers reject that combination outright. Set "
+                "allow_origins to your actual origin(s) when allow_credentials=True."
+            )
+        return v
+
 
 class LoggingConfig(BaseModel):
     """Configuration for logging.
