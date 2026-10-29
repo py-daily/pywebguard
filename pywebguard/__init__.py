@@ -48,6 +48,16 @@ try:
 except ImportError:
     pass
 
+try:
+    from pywebguard.storage._mongodb import MongoDBStorage, AsyncMongoDBStorage
+except ImportError:
+    pass
+
+try:
+    from pywebguard.storage._postgresql import PostgreSQLStorage, AsyncPostgreSQLStorage
+except ImportError:
+    pass
+
 # Framework-specific imports - imported conditionally to avoid import errors
 # if the framework is not installed
 try:
@@ -92,6 +102,10 @@ for storage_class in [
     "AsyncSQLiteStorage",
     "TinyDBStorage",
     "AsyncTinyDBStorage",
+    "MongoDBStorage",
+    "AsyncMongoDBStorage",
+    "PostgreSQLStorage",
+    "AsyncPostgreSQLStorage",
 ]:
     if hasattr(current_module, storage_class):
         __all__.append(storage_class)

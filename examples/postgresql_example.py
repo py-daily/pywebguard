@@ -21,8 +21,7 @@ import logging
 from typing import Dict, List, Optional, Union, Any
 
 # Import PyWebGuard components
-from pywebguard import FlaskGuard, GuardConfig
-from pywebguard.storage._postgresql import PostgreSQLStorage
+from pywebguard import FlaskGuard, GuardConfig, PostgreSQLStorage
 
 # Configure logging
 logging.basicConfig(
