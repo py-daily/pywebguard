@@ -23,8 +23,7 @@ import logging
 from typing import Dict, List, Optional, Union, Any
 
 # Import PyWebGuard components
-from pywebguard import FastAPIGuard, GuardConfig
-from pywebguard.storage._mongodb import AsyncMongoDBStorage
+from pywebguard import FastAPIGuard, GuardConfig, AsyncMongoDBStorage
 
 # Configure logging
 logging.basicConfig(
