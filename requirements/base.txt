@@ -1,4 +1,4 @@
 # Core dependencies
-pydantic>=2.14.2
+pydantic>=2.14.3
 ipaddress
 python-dotenv>=1.2.4
